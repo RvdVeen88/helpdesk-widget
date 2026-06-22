@@ -77,17 +77,48 @@
         var params = new URLSearchParams(window.location.search);
         var code = params.get("code");
         var tokenurl = params.get("tokenurl");
-        
-        console.log("Stap 1: Code ontvangen uit URL:", code);
 
         if (!code || !tokenurl) {
-           showError("Geen geldige parameters ontvangen van AFAS. Controleer de integratie-URL.");
+           showError("Geen geldige parameters ontvangen van AFAS. Navigeer opnieuw via het menu.");
            return;
         }
 
-        // Voorkom dubbele aanroepen
-        if (sessionStorage.getItem('lastCode') === code) {
-          console.log("Stap 2: Code is al verwerkt.");
-          return;
-        }
-        sessionStorage.setItem('lastCode', code);
+        // We slaan sessionStorage over om Tracking Prevention blokkades te voorkomen
+        var payload = {
+            code: code,
+            tokenurl: tokenurl
+        };
+
+        var tokenResponse = await fetch(AZURE_FUNCTION_ENDPOINT, { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }).then(function (res) {
+          return res.json().then(function(data) {
+             if (!res.ok) throw new Error(data.foutmelding || data.error || "Fout bij Azure: " + res.status);
+             return data;
+          });
+        });
+
+        var directLine = WebChat.createDirectLine({ token: tokenResponse.token });
+
+        document.getElementById("status").style.display = "none";
+        var webchatEl = document.getElementById("webchat");
+        webchatEl.style.display = "block";
+
+        WebChat.renderWebChat({
+          directLine: directLine,
+          styleOptions: styleOptions,
+          locale: "nl-NL"
+        }, webchatEl);
+
+      } catch (err) {
+        showError(err.message);
+        console.error("Fout:", err);
+      }
+    })();
+  </script>
+</body>
+</html>
