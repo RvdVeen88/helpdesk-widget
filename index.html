@@ -1,126 +1,98 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ICT Helpdesk</title>
+const https = require('https');
 
-  <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet">
+module.exports = async function (context, req) {
+    const secret = process.env.AFAS_SECRET_KEY;
+    const copilotEndpoint = process.env.COPILOT_TOKEN_ENDPOINT;
+    
+    // NIEUW: Lees de data nu uit de POST-body in plaats van de URL-balk
+    const tokenUrl = (req.body && req.body.tokenurl) || req.query.tokenurl;
+    const code = (req.body && req.body.code) || req.query.code;
 
-  <style>
-    :root {
-      --dc-blue: #1E4189;
-      --dc-bubble-bot: #F1F4F9;
-      --dc-bubble-user: #1E4189;
-      --dc-bubble-user-tx: #FFFFFF;
-      --dc-bg: #FFFFFF;
-      --dc-text: #1F2430;
-      --dc-text-soft: #5A6072;
-      --dc-border: #E8EDF3;
-      --dc-font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
-    }
-    html, body { margin:0; padding:0; height:100%; background:var(--dc-bg); font-family:var(--dc-font); color:var(--dc-text); }
-    #app { display:flex; flex-direction:column; height:100vh; min-height:100%; }
-    .dc-header { display:flex; align-items:center; gap:10px; margin:10px; padding:10px 16px; background:#FFFFFF; border:1.5px solid var(--dc-blue); border-radius:12px; flex:0 0 auto; }
-    .dc-header .dc-dot { width:9px; height:9px; border-radius:50%; background:#2ECC71; flex:0 0 auto; animation:breathe 2s ease-in-out infinite; }
-    .dc-header h1 { font-size:15px; font-weight:600; margin:0; color:var(--dc-blue); }
-    .dc-header .dc-refresh { margin-left:auto; color:#9AA6B6; font-size:18px; cursor:pointer; }
-    @keyframes breathe { 0%,100% { box-shadow:0 0 0 0 rgba(46,204,113,.55); opacity:1; } 50% { box-shadow:0 0 0 5px rgba(46,204,113,0); opacity:.65; } }
-    #webchat { flex:1 1 auto; min-height:0; overflow:hidden; }
-    .dc-status { flex:1 1 auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; padding:24px; text-align:center; color:var(--dc-text-soft); }
-    .dc-status .spinner { width:28px; height:28px; border:3px solid var(--dc-border); border-top-color:var(--dc-blue); border-radius:50%; animation:spin .9s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    .dc-status .hint { font-size:13px; max-width:360px; line-height:1.5; }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <div class="dc-header">
-      <span class="dc-dot" aria-hidden="true"></span>
-      <h1>AI Helpdesk Assistent</h1>
-      <i class="ti ti-refresh dc-refresh" aria-hidden="true" onclick="location.reload()"></i>
-    </div>
-    <div id="status" class="dc-status">
-      <div class="spinner" aria-hidden="true"></div>
-      <div class="hint">Even geduld, de helpdesk wordt geladen…</div>
-    </div>
-    <div id="webchat" role="main" style="display:none"></div>
-  </div>
-
-  <script>
-    var AZURE_FUNCTION_ENDPOINT = "https://func-dck-helpdesk-b8cpg3gmd6d5hsgp.westeurope-01.azurewebsites.net/api/get-chat-token";
-
-    function getCss(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-
-    var styleOptions = {
-      backgroundColor: "#FFFFFF",
-      bubbleBackground: getCss("--dc-bubble-bot"),
-      bubbleTextColor: getCss("--dc-text"),
-      bubbleBorderRadius: 14,
-      bubbleFromUserBackground: getCss("--dc-bubble-user"),
-      bubbleFromUserTextColor: getCss("--dc-bubble-user-tx"),
-      sendBoxHeight: 48,
-      accent: getCss("--dc-blue"),
-      botAvatarBackgroundColor: getCss("--dc-blue"),
-      botAvatarInitials: "AI",
-      userAvatarInitials: "Ik"
-    };
-
-    function showError(message){
-      var status = document.getElementById("status");
-      status.innerHTML = '<div class="hint" style="color:#B23B3B"><strong>Fout:</strong><br>' + message + "</div>";
+    if (!secret || !tokenUrl || !code) {
+        context.res = {
+            status: 400,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            body: { error: "Ontbrekende parameters (secret, tokenUrl of code mist in de body)." }
+        };
+        return;
     }
 
-    (async function main() {
-      try {
-        var params = new URLSearchParams(window.location.search);
-        var code = params.get("code");
-        
-        console.log("Stap 1: Code ontvangen uit URL:", code);
+    try {
+        // 1. Wissel code in bij AFAS 
+        const afasData = await new Promise((resolve, reject) => {
+            const data = `secret=${encodeURIComponent(secret)}&code=${encodeURIComponent(code)}`;
+            const options = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Length': Buffer.byteLength(data)
+                }
+            };
 
-        if (!code) {
-           showError("Geen code ontvangen van AFAS. Controleer de integratie-URL.");
-           return;
-        }
-
-        // Voorkom dubbele aanroepen
-        if (sessionStorage.getItem('lastCode') === code) {
-          console.log("Stap 2: Code is al verwerkt, wacht op chat...");
-          return;
-        }
-        sessionStorage.setItem('lastCode', code);
-
-        var fetchUrl = AZURE_FUNCTION_ENDPOINT + window.location.search;
-        console.log("Stap 3: Aanroep naar Azure:", fetchUrl);
-
-        // AANGEPAST: method: 'POST' is hier toegevoegd om proxy-scanners te blokkeren
-        var tokenResponse = await fetch(fetchUrl, { method: 'POST' }).then(function (res) {
-          return res.json().then(function(data) {
-             if (!res.ok) throw new Error(data.error || "Fout bij Azure: " + res.status);
-             return data;
-          });
+            const r = https.request(tokenUrl, options, (res) => {
+                let body = '';
+                res.on('data', (c) => { body += c; });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            resolve(JSON.parse(body));
+                        } catch (e) {
+                            reject(new Error("AFAS gaf ongeldige JSON terug: " + body));
+                        }
+                    } else {
+                        reject(new Error("AFAS weigerde de aanvraag (status " + res.statusCode + "): " + body));
+                    }
+                });
+            });
+            r.on('error', reject);
+            r.write(data);
+            r.end();
         });
 
-        console.log("Stap 4: Token ontvangen, chat starten.");
+        // 2. Haal Direct Line Token op bij Copilot
+        const copilotResponse = await new Promise((resolve, reject) => {
+            if (!copilotEndpoint) {
+                reject(new Error("COPILOT_TOKEN_ENDPOINT is niet ingesteld."));
+                return;
+            }
 
-        var directLine = WebChat.createDirectLine({ token: tokenResponse.token });
+            https.get(copilotEndpoint, (res) => {
+                let data = '';
+                res.on('data', (c) => { data += c; });
+                res.on('end', () => {
+                    if (res.statusCode === 200) {
+                        try {
+                            resolve(JSON.parse(data));
+                        } catch (e) {
+                            reject(new Error("Copilot gaf ongeldige JSON terug."));
+                        }
+                    } else {
+                        reject(new Error("Copilot weigerde de aanvraag: " + res.statusCode));
+                    }
+                });
+            }).on('error', reject).end();
+        });
 
-        document.getElementById("status").style.display = "none";
-        var webchatEl = document.getElementById("webchat");
-        webchatEl.style.display = "block";
+        // 3. Stuur succesvol terug
+        context.res = {
+            status: 200,
+            headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
+            body: copilotResponse
+        };
 
-        WebChat.renderWebChat({
-          directLine: directLine,
-          styleOptions: styleOptions,
-          locale: "nl-NL"
-        }, webchatEl);
-
-      } catch (err) {
-        showError(err.message);
-        console.error("Fout:", err);
-      }
-    })();
-  </script>
-</body>
-</html>
+    } catch (error) {
+        context.log("Fout opgetreden:", error);
+        context.res = {
+            status: 500,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            body: {
+                message: "De Azure Function is gecrasht.",
+                foutmelding: error.message,
+                stacktrace: error.stack
+            }
+        };
+    }
+};
