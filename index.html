@@ -7,39 +7,8 @@
 
   <!-- Bot Framework Web Chat -->
   <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
-  <!-- Microsoft Authentication Library (MSAL v1 — past bij Web-platform + implicit grant) -->
-  <script src="https://alcdn.msftauth.net/lib/1.4.18/js/msal.min.js"></script>
   <!-- Tabler iconen (voor het verversicoon) -->
   <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" rel="stylesheet">
-
-  <script>
-    /* =========================================================================
-       SSO-CONFIGURATIE — al ingevuld op basis van jouw app registrations
-       -------------------------------------------------------------------------
-       CANVAS_CLIENT_ID  = Application (client) ID van "ICT Helpdesk Canvas"
-       TENANT_ID         = Directory (tenant) ID
-       Beide komen van de Overzicht-pagina van de CANVAS-app.
-       ========================================================================= */
-    var CANVAS_CLIENT_ID = "60071d66-e257-47c5-a5eb-6600eade23d1";
-    var TENANT_ID        = "0ceb8564-e296-4331-9dce-d837ea00eab8";
-
-    var clientApplication;
-    (function () {
-      var msalConfig = {
-        auth: {
-          clientId: CANVAS_CLIENT_ID,
-          authority: "https://login.microsoftonline.com/" + TENANT_ID
-        },
-        cache: {
-          cacheLocation: "localStorage",
-          storeAuthStateInCookie: false
-        }
-      };
-      if (!clientApplication) {
-        clientApplication = new Msal.UserAgentApplication(msalConfig);
-      }
-    })();
-  </script>
 
   <style>
     :root {
@@ -58,10 +27,10 @@
     .dc-header { display:flex; align-items:center; gap:10px; margin:10px; padding:10px 16px; background:#FFFFFF; border:1.5px solid var(--dc-blue); border-radius:12px; flex:0 0 auto; }
     .dc-header .dc-dot { width:9px; height:9px; border-radius:50%; background:#2ECC71; flex:0 0 auto; animation:breathe 2s ease-in-out infinite; }
     .dc-header h1 { font-size:15px; font-weight:600; margin:0; color:var(--dc-blue); }
-    .dc-header .dc-refresh { margin-left:auto; color:#9AA6B6; font-size:18px; }
+    .dc-header .dc-refresh { margin-left:auto; color:#9AA6B6; font-size:18px; cursor:pointer; }
     @keyframes breathe {
       0%,100% { box-shadow:0 0 0 0 rgba(46,204,113,.55); opacity:1; }
-      50%     { box-shadow:0 0 0 5px rgba(46,204,113,0); opacity:.65; }
+      50%      { box-shadow:0 0 0 5px rgba(46,204,113,0); opacity:.65; }
     }
     #webchat { flex:1 1 auto; min-height:0; overflow:hidden; }
     .dc-status { flex:1 1 auto; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; padding:24px; text-align:center; color:var(--dc-text-soft); }
@@ -76,7 +45,7 @@
     <div class="dc-header">
       <span class="dc-dot" aria-hidden="true"></span>
       <h1>AI Helpdesk Assistent</h1>
-      <i class="ti ti-refresh dc-refresh" aria-hidden="true"></i>
+      <i class="ti ti-refresh dc-refresh" aria-hidden="true" onclick="location.reload()"></i>
     </div>
     <div id="status" class="dc-status">
       <div class="spinner" aria-hidden="true"></div>
@@ -86,8 +55,8 @@
   </div>
 
   <script>
-    /* Jouw token-endpoint (werkt al, ongewijzigd) */
-    var TOKEN_ENDPOINT = "https://9d292042c6e2e2a4a5370e1b3ec0a2.56.environment.api.powerplatform.com/powervirtualagents/botsbyschema/cr408_ICTHelpdeskAgentv11/directline/token?api-version=2022-03-01-preview";
+    /* Jouw nieuwe Azure Function URL */
+    var AZURE_FUNCTION_ENDPOINT = "https://func-dck-helpdesk-b8cpg3gmd6d5hsgp.westeurope-01.azurewebsites.net/api/get-chat-token";
 
     function getCss(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
@@ -121,132 +90,37 @@
       status.innerHTML = '<div class="hint" style="color:#B23B3B"><strong>De chat kon niet worden geladen.</strong><br>' + message + "</div>";
     }
 
-    /* --- SSO-kern: vang de aanmeldkaart van Copilot op en wissel stil een token uit --- */
-
-    function getOAuthCardResourceUri(activity) {
-      if (activity &&
-          activity.attachments &&
-          activity.attachments[0] &&
-          activity.attachments[0].contentType === "application/vnd.microsoft.card.oauth" &&
-          activity.attachments[0].content.tokenExchangeResource) {
-        return activity.attachments[0].content.tokenExchangeResource.uri;
-      }
-    }
-
-    function exchangeTokenAsync(resourceUri) {
-      var user = clientApplication.getAccount();
-      if (user) {
-        var requestObj = { scopes: [resourceUri] };
-        return clientApplication.acquireTokenSilent(requestObj)
-          .then(function (tokenResponse) { return tokenResponse.accessToken; })
-          .catch(function (error) {
-            console.log("Silent token-uitwisseling mislukt, popup proberen:", error);
-            // Binnen een iframe kan silent falen -> popup als terugval
-            return clientApplication.acquireTokenPopup(requestObj)
-              .then(function (tokenResponse) { return tokenResponse.accessToken; })
-              .catch(function (popupError) { console.log("Token-popup mislukt:", popupError); return null; });
-          });
-      } else {
-        return Promise.resolve(null);
-      }
-    }
-
-    /* --- Hoofdflow --- */
+    /* --- Hoofdflow: Token halen via Azure Function --- */
     (async function main() {
       try {
-        // 1) Zorg dat de gebruiker een MSAL-sessie heeft. Binnen een iframe (zoals in
-        //    InSite) kan geen full-page redirect naar Entra ID; daarom een popup.
-        //    Omdat de gebruiker al bij Entra is ingelogd, flitst die popup meestal
-        //    direct weer weg.
-        if (!clientApplication.getAccount()) {
-          try {
-            await clientApplication.loginPopup({ scopes: ["openid", "profile"] });
-          } catch (loginErr) {
-            showError("Aanmelden is niet gelukt. Mogelijk blokkeert de browser het aanmeldvenster — sta pop-ups toe voor deze pagina en probeer opnieuw.");
-            console.error("loginPopup fout:", loginErr);
-            return;
-          }
-        }
+        // We pakken de parameters die AFAS in de URL heeft gezet (zoals publickey, code, dataurl)
+        // en sturen deze 1-op-1 door naar jouw backend in Azure.
+        var queryString = window.location.search;
+        var fetchUrl = AZURE_FUNCTION_ENDPOINT + queryString;
 
-        // 2) Haal een Direct Line-token op (zoals in de werkende versie)
-        var token = await fetch(TOKEN_ENDPOINT).then(function (res) {
-          if (!res.ok) throw new Error("Token niet verkregen (status " + res.status + ").");
+        var tokenResponse = await fetch(fetchUrl).then(function (res) {
+          if (!res.ok) throw new Error("Fout bij ophalen token (status " + res.status + "). Controleer de Azure Function.");
           return res.json();
-        }).then(function (json) { return json.token; });
-
-        var directLine = WebChat.createDirectLine({ token: token });
-
-        // 3) Unieke gebruikers-id (max 64 tekens), afgeleid van het Entra-account
-        var acct = clientApplication.getAccount();
-        var userId = (acct && acct.accountIdentifier)
-          ? ("dckhelpdesk" + acct.accountIdentifier).substr(0, 64)
-          : (Math.random().toString() + Date.now().toString()).substr(0, 64);
-
-        // 4) Web Chat-store met middleware die de aanmeldkaart onderschept
-        var store = WebChat.createStore({}, function (_ref) {
-          var dispatch = _ref.dispatch;
-          return function (next) {
-            return function (action) {
-              if (action.type === "DIRECT_LINE/INCOMING_ACTIVITY") {
-                var activity = action.payload.activity;
-                var resourceUri;
-                if (activity.from && activity.from.role === "bot" &&
-                    (resourceUri = getOAuthCardResourceUri(activity))) {
-                  exchangeTokenAsync(resourceUri).then(function (exchangedToken) {
-                    if (exchangedToken) {
-                      var content = activity.attachments[0].content;
-                      directLine.postActivity({
-                        type: "invoke",
-                        name: "signin/tokenExchange",
-                        value: {
-                          id: content.tokenExchangeResource.id,
-                          connectionName: content.connectionName,
-                          token: exchangedToken
-                        },
-                        from: { id: userId, name: (acct ? acct.name : "user"), role: "user" }
-                      }).subscribe(
-                        function (id) {
-                          if (id === "retry") {
-                            // Uitwisseling geweigerd -> toon alsnog de aanmeldkaart
-                            next(action);
-                          }
-                          // bij succes: kaart wordt ingeslikt, gebruiker merkt niets
-                        },
-                        function (error) {
-                          // Fout bij posten -> toon de kaart als terugval
-                          next(action);
-                        }
-                      );
-                      return;
-                    } else {
-                      return next(action);
-                    }
-                  });
-                  return; // wacht op de async-afhandeling hierboven
-                } else {
-                  return next(action);
-                }
-              } else {
-                return next(action);
-              }
-            };
-          };
         });
 
-        // 5) Render
+        // Zodra we het token hebben, starten we de chat
+        var token = tokenResponse.token;
+        var directLine = WebChat.createDirectLine({ token: token });
+
+        // Verberg de lader, toon de chat
         document.getElementById("status").style.display = "none";
         var webchatEl = document.getElementById("webchat");
         webchatEl.style.display = "block";
+
         WebChat.renderWebChat({
           directLine: directLine,
-          store: store,
           styleOptions: styleOptions,
           locale: "nl-NL"
         }, webchatEl);
         webchatEl.focus();
 
       } catch (err) {
-        showError((err && err.message) ? err.message : "Onbekende fout.");
+        showError((err && err.message) ? err.message : "Onbekende fout bij het laden.");
         console.error(err);
       }
     })();
