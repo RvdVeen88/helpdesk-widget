@@ -69,7 +69,7 @@
 
     function showError(message){
       var status = document.getElementById("status");
-      status.innerHTML = '<div class="hint" style="color:#B23B3B"><strong>De chat kon niet worden geladen.</strong><br>' + message + "</div>";
+      status.innerHTML = '<div class="hint" style="color:#B23B3B"><strong>Fout:</strong><br>' + message + "</div>";
     }
 
     (async function main() {
@@ -77,20 +77,31 @@
         var params = new URLSearchParams(window.location.search);
         var code = params.get("code");
         
-        // Voorkom dubbele aanroepen binnen één sessie
-        if (code && sessionStorage.getItem('lastCode') === code) {
-          console.log("Code al verwerkt, wacht op chat...");
+        console.log("Stap 1: Code ontvangen uit URL:", code);
+
+        if (!code) {
+           showError("Geen code ontvangen van AFAS. Controleer de integratie-URL.");
+           return;
+        }
+
+        // Voorkom dubbele aanroepen
+        if (sessionStorage.getItem('lastCode') === code) {
+          console.log("Stap 2: Code is al verwerkt, wacht op chat...");
           return;
         }
-        if (code) sessionStorage.setItem('lastCode', code);
+        sessionStorage.setItem('lastCode', code);
 
         var fetchUrl = AZURE_FUNCTION_ENDPOINT + window.location.search;
+        console.log("Stap 3: Aanroep naar Azure:", fetchUrl);
+
         var tokenResponse = await fetch(fetchUrl).then(function (res) {
-          if (!res.ok) throw new Error("Fout bij ophalen token (status " + res.status + ").");
-          return res.json();
+          return res.json().then(function(data) {
+             if (!res.ok) throw new Error(data.error || "Fout bij Azure: " + res.status);
+             return data;
+          });
         });
 
-        if (tokenResponse.error) throw new Error(tokenResponse.error);
+        console.log("Stap 4: Token ontvangen, chat starten.");
 
         var directLine = WebChat.createDirectLine({ token: tokenResponse.token });
 
@@ -105,7 +116,8 @@
         }, webchatEl);
 
       } catch (err) {
-        showError((err && err.message) ? err.message : "Systeem tijdelijk bezet.");
+        showError(err.message);
+        console.error("Fout:", err);
       }
     })();
   </script>
