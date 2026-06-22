@@ -94,7 +94,8 @@
         var fetchUrl = AZURE_FUNCTION_ENDPOINT + window.location.search;
         console.log("Stap 3: Aanroep naar Azure:", fetchUrl);
 
-        var tokenResponse = await fetch(fetchUrl).then(function (res) {
+        // AANGEPAST: method: 'POST' is hier toegevoegd om proxy-scanners te blokkeren
+        var tokenResponse = await fetch(fetchUrl, { method: 'POST' }).then(function (res) {
           return res.json().then(function(data) {
              if (!res.ok) throw new Error(data.error || "Fout bij Azure: " + res.status);
              return data;
