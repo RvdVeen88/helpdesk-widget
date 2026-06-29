@@ -42,10 +42,6 @@
   </div>
 
   <script>
-    /* =========================================================================
-       INSTELLEN — vul hier je Azure Function-URL in
-       (de "default (Functietoets)"-URL, inclusief ?code=... als die er is)
-       ========================================================================= */
     var FUNCTION_URL = "https://func-dck-helpdesk-b8cpg3gmd6d5hsgp.westeurope-01.azurewebsites.net/api/get-chat-token";
 
     function getCss(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
@@ -70,7 +66,6 @@
       s.innerHTML='<div class="hint" style="color:#B23B3B"><strong>De chat kon niet worden geladen.</strong><br>'+msg+'</div>';
     }
 
-    // Lees de parameters die AFAS aan deze pagina meegaf (uit de URL van DEZE pagina)
     function getAfasParams(){
       var p = new URLSearchParams(window.location.search);
       return {
@@ -91,8 +86,6 @@
           return;
         }
 
-        // Roep de Azure Function aan met de AFAS-parameters.
-        // De Function haalt de identiteit op en geeft een veilig token terug.
         var sep = FUNCTION_URL.indexOf("?") === -1 ? "?" : "&";
         var url = FUNCTION_URL + sep +
           "tokenurl=" + encodeURIComponent(afas.tokenurl) +
@@ -112,12 +105,26 @@
 
         var directLine = WebChat.createDirectLine({ token: data.token });
 
+        // Store met middleware: stuur startConversation zodra verbinding tot stand komt
+        var welcomeSent = false;
+        var store = WebChat.createStore({}, function(storeApi){ return function(next){ return function(action){
+          if(action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !welcomeSent){
+            welcomeSent = true;
+            storeApi.dispatch({
+              type: "WEB_CHAT/SEND_EVENT",
+              payload: { name: "startConversation", type: "event", value: "" }
+            });
+          }
+          return next(action);
+        }; }; });
+
         document.getElementById("status").style.display="none";
         var el=document.getElementById("webchat");
         el.style.display="block";
 
         WebChat.renderWebChat({
           directLine: directLine,
+          store: store,
           styleOptions: styleOptions,
           userID: data.userId,
           username: data.displayName,
