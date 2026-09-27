@@ -48,6 +48,11 @@
     .dc-refresh:hover{opacity:1;background:rgba(255,255,255,.18);}
     @media (prefers-reduced-motion: reduce){.dc-dot,.dc-orb .core,.dc-orb .ring,.dots i{animation:none;}}
 
+    /* Nieuwe berichten ploppen zacht in */
+    .webchat__basic-transcript__activity, .pv-row{animation:dc-pop-in .28s cubic-bezier(.2,.8,.3,1.15) both;}
+    @keyframes dc-pop-in{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
+    @media (prefers-reduced-motion: reduce){.webchat__basic-transcript__activity,.pv-row{animation:none;}}
+
     /* WebChat: 'D'-vorm op bot-bubbels (rechterzijde rond), gespiegeld bij de gebruiker */
     .webchat__bubble__content{border-radius:6px 18px 18px 6px !important;box-shadow:var(--dc-bubble-shadow);}
     .webchat__bubble--from-user .webchat__bubble__content{border-radius:18px 6px 6px 18px !important;}
@@ -165,9 +170,12 @@
       splashIdx = (splashIdx + 1) % splashTexts.length;
       var t = document.getElementById("dc-splash-text"); if(t) t.textContent = splashTexts[splashIdx];
     }, 2200);
-    var splashHidden = false;
+    var splashHidden = false, splashStart = Date.now(), SPLASH_MIN = 2000;
     function hideSplash(){
-      if(splashHidden) return; splashHidden = true; clearInterval(splashTimer);
+      if(splashHidden) return;
+      var rest = SPLASH_MIN - (Date.now() - splashStart);
+      if(rest > 0){ setTimeout(hideSplash, rest); return; }
+      splashHidden = true; clearInterval(splashTimer);
       document.getElementById("status").classList.add("is-hidden");
     }
     function showError(msg){
