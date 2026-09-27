@@ -190,7 +190,18 @@
                publickey:p.get("publickey"), sessionid:p.get("sessionid"), preview:p.get("preview") };
     }
 
-    document.getElementById("dc-refresh").addEventListener("click", function(){ window.location.reload(); });
+    // Opnieuw starten: de AFAS-code in de URL is eenmalig, dus de pagina zelf herladen werkt niet.
+    // Eerst proberen de bovenliggende InSite-pagina te verversen (die maakt een nieuwe code aan);
+    // lukt dat niet, dan de agent zelf laten resetten via het systeemonderwerp "Gesprek opnieuw starten".
+    var chatStore = null;
+    document.getElementById("dc-refresh").addEventListener("click", function(){
+      try { if(window.top !== window){ window.top.location.reload(); return; } } catch(e){}
+      if(chatStore){
+        chatStore.dispatch({ type:"WEB_CHAT/SEND_MESSAGE", payload:{ text:"Opnieuw beginnen" } });
+      } else {
+        window.location.reload();
+      }
+    });
 
     (async function main(){
       try {
@@ -213,7 +224,7 @@
         var url = FUNCTION_URL + sep + "tokenurl=" + encodeURIComponent(afas.tokenurl) + "&code=" + encodeURIComponent(afas.code);
 
         var resp = await fetch(url, { method:"GET" });
-        if(!resp.ok){ var t = await resp.text(); showError("Kon de helpdesk niet starten (" + resp.status + "). " + t); return; }
+        if(!resp.ok){ var t = await resp.text(); showError("Kon de helpdesk niet starten (" + resp.status + "). " + t + "<br><br>Ververs de InSite-pagina (F5) en probeer het opnieuw."); return; }
         var data = await resp.json();
         if(!data.token){ showError("Geen geldig chat-token ontvangen."); return; }
 
@@ -233,6 +244,7 @@
           if(action.type === "DIRECT_LINE/DISCONNECT_FULFILLED" || action.type === "DIRECT_LINE/CONNECT_REJECTED"){ setOnline(false); }
           return next(action);
         }; }; });
+        chatStore = store;
 
         var el=document.getElementById("webchat");
 
