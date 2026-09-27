@@ -44,9 +44,19 @@
     .dc-dot{width:9px;height:9px;border-radius:50%;background:#3DBE7A;flex:0 0 auto;animation:breathe 2.4s ease-in-out infinite;}
     .dc-dot.is-offline{background:#F3764A;animation:none;}
     @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(61,190,122,.5);}50%{box-shadow:0 0 0 6px rgba(61,190,122,0);}}
-    .dc-refresh{margin-left:auto;background:transparent;border:0;cursor:pointer;padding:6px;border-radius:50%;display:flex;color:inherit;opacity:.75;}
+    .dc-refresh{margin-left:2px;background:transparent;border:0;cursor:pointer;padding:6px;border-radius:50%;display:flex;color:inherit;opacity:.75;}
     .dc-refresh:hover{opacity:1;background:rgba(255,255,255,.18);}
     @media (prefers-reduced-motion: reduce){.dc-dot,.dc-orb .core,.dc-orb .ring,.dots i{animation:none;}}
+
+    /* Infopaneel */
+    .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
+    .dc-infopanel[hidden]{display:none;}
+    .dc-infocard{background:#fff;color:var(--dc-text);border-radius:6px 22px 22px 6px;padding:18px 20px;max-width:360px;width:100%;box-shadow:0 12px 32px rgba(5,55,135,.25);font-size:13.5px;line-height:1.55;}
+    .dc-infocard h2{margin:0 0 8px;font-size:15px;color:var(--dc-blauw);}
+    .dc-infocard p{margin:0 0 10px;}
+    .dc-infocard p.pilot{color:var(--dc-text-soft);font-size:12.5px;}
+    .dc-infocard button{font:inherit;font-weight:600;font-size:13px;color:#fff;background:var(--dc-blauw);border:0;border-radius:999px;padding:8px 18px;cursor:pointer;margin-top:4px;}
+    .dc-infocard button:hover{background:var(--dc-blue-hover);}
 
     /* Nieuwe berichten ploppen zacht in */
     .webchat__basic-transcript__activity, .pv-row{animation:dc-pop-in .28s cubic-bezier(.2,.8,.3,1.15) both;}
@@ -83,12 +93,13 @@
 
 
     /* Compacte kop als 'D': links recht, rechts volledig rond */
-    .dc-header{display:flex;align-items:center;gap:8px;margin:8px 8px 6px 0;padding:0 8px 0 12px;height:42px;overflow:hidden;background:var(--dc-blauw);color:#fff;border-radius:0 22px 22px 0;flex:0 0 auto;}
-    .dc-header .dc-logo{flex:0 0 auto;padding-right:8px;border-right:1px solid rgba(255,255,255,.35);}
+    .dc-header{display:flex;align-items:center;gap:7px;margin:8px 8px 6px 0;padding:0 6px 0 12px;height:42px;overflow:hidden;background:var(--dc-blauw);color:#fff;border-radius:0 22px 22px 0;flex:0 0 auto;}
+    .dc-header .dc-logo{flex:0 0 auto;padding-right:6px;border-right:1px solid rgba(255,255,255,.35);}
     .dc-header h1{font-size:13px;font-weight:600;margin:0;white-space:nowrap;display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto;}
     .dc-header h1 .dc-t{min-width:0;overflow:hidden;text-overflow:ellipsis;}
     .dc-header .dc-dot,.dc-header .dc-pilot{flex:0 0 auto;}
     .dc-refresh{padding:3px;flex:0 0 auto;}
+    #dc-info{margin-left:auto;}
     .dc-refresh svg{width:16px;height:16px;}
     .dc-pilot{font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--dc-lichtblauw);border:1px solid rgba(181,208,255,.55);border-radius:999px;padding:1px 6px;line-height:1.4;}
 
@@ -99,6 +110,9 @@
     <header class="dc-header">
       <div class="dc-logo"><svg style="height:12px;width:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="200.08 175.78 296.93 36.14" role="img" aria-label="DC Klinieken"><path fill-rule="nonzero" fill="#FFFFFF" fill-opacity="1" d="M 278.140625 211.046875 L 286.90625 211.046875 L 289.953125 195.601562 L 290.050781 195.601562 L 298.414062 211.046875 L 308.332031 211.046875 L 298.007812 192.941406 L 309.324219 178.488281 L 302.382812 178.488281 L 290.347656 193.933594 L 290.261719 193.933594 L 293.453125 178.488281 L 284.683594 178.488281 Z M 310.605469 211.046875 L 319.382812 211.046875 L 326.324219 176.328125 L 317.597656 176.328125 Z M 325.542969 211.046875 L 334.308594 211.046875 L 339.269531 186.632812 L 330.5 186.632812 Z M 331.214844 182.8125 L 339.996094 182.8125 L 341.402344 175.785156 L 332.632812 175.785156 Z M 354.15625 186.59375 L 345.480469 186.59375 L 340.519531 211.007812 L 349.296875 211.007812 L 350.855469 203.433594 C 351.71875 201.675781 357.074219 193.796875 358.671875 193.796875 C 359.078125 193.796875 359.167969 194.246094 359.167969 194.523438 C 359.117188 194.929688 359.042969 195.332031 358.9375 195.730469 L 355.894531 211.046875 L 364.621094 211.046875 L 367.945312 194.699219 C 368.238281 193.546875 368.421875 192.367188 368.492188 191.179688 C 368.492188 188.351562 366.664062 186.09375 363.582031 186.09375 C 358.53125 186.09375 353.898438 192.800781 352.074219 196.898438 L 351.53125 196.898438 Z M 370.78125 211.007812 L 379.550781 211.007812 L 384.460938 186.59375 L 375.652344 186.59375 Z M 376.457031 182.773438 L 385.234375 182.773438 L 386.640625 175.785156 L 377.875 175.785156 Z M 410.308594 202.851562 C 407.332031 204.425781 402.375 206.410156 399.042969 206.410156 C 396.632812 206.410156 394.628906 205.328125 394.585938 202.714844 C 400.816406 202.902344 410.042969 198.578125 410.042969 191.507812 C 410.042969 187.722656 406.453125 186.054688 403.355469 186.054688 C 391.988281 186.054688 385.808594 196.332031 385.808594 203.394531 C 385.808594 209.0625 391.175781 211.546875 396.175781 211.546875 C 400.539062 211.546875 404.765625 210.371094 409.070312 208.847656 Z M 395.171875 197.890625 C 395.589844 195.554688 397.472656 191.507812 400.3125 191.507812 C 401.238281 191.429688 402.054688 192.113281 402.128906 193.035156 C 402.140625 193.140625 402.136719 193.246094 402.125 193.351562 C 402.125 196.554688 399.308594 197.992188 395.183594 197.902344 M 413.117188 211.058594 L 421.882812 211.058594 L 424.207031 199.523438 L 425.027344 199.523438 L 430.117188 211.058594 L 439.429688 211.058594 L 432.757812 197.234375 L 442.335938 186.59375 L 435.703125 186.59375 L 425.652344 197.765625 L 424.5625 197.765625 L 428.839844 176.328125 L 420.109375 176.328125 Z M 466.261719 202.902344 C 463.285156 204.472656 458.328125 206.460938 454.984375 206.460938 C 452.574219 206.460938 450.582031 205.378906 450.53125 202.765625 C 456.761719 202.953125 465.984375 198.628906 465.984375 191.554688 C 465.984375 187.773438 462.394531 186.101562 459.308594 186.101562 C 447.941406 186.101562 441.761719 196.378906 441.761719 203.441406 C 441.761719 209.113281 447.117188 211.597656 452.128906 211.597656 C 456.550781 211.4375 460.910156 210.523438 465.023438 208.894531 Z M 451.117188 197.890625 C 451.523438 195.554688 453.386719 191.496094 456.253906 191.496094 C 457.179688 191.421875 457.996094 192.101562 458.074219 193.023438 C 458.082031 193.128906 458.082031 193.238281 458.070312 193.34375 C 458.070312 196.546875 455.253906 197.980469 451.125 197.890625 M 482.640625 186.59375 L 473.949219 186.59375 L 468.992188 211.007812 L 477.816406 211.007812 L 479.363281 203.394531 C 480.226562 201.636719 485.59375 193.757812 487.179688 193.757812 C 487.585938 193.757812 487.675781 194.207031 487.675781 194.484375 C 487.628906 194.890625 487.550781 195.292969 487.449219 195.691406 L 484.402344 211.007812 L 493.132812 211.007812 L 496.457031 194.660156 C 496.75 193.507812 496.929688 192.328125 497 191.144531 C 497 188.3125 495.183594 186.054688 492.089844 186.054688 C 487.042969 186.054688 482.410156 192.761719 480.585938 196.859375 L 480.039062 196.859375 Z M 482.640625 186.59375 "/><path fill-rule="nonzero" fill="#FFFFFF" fill-opacity="1" d="M 200.085938 211.046875 L 216.40625 211.046875 C 224.882812 211.046875 231.828125 205.644531 231.828125 194.199219 C 231.828125 181.238281 222.503906 178.476562 217.941406 178.476562 L 200.085938 178.476562 Z M 208.867188 183.890625 L 213.320312 183.890625 C 221.085938 183.890625 222.542969 189.972656 222.542969 194.523438 C 222.542969 199.964844 220.628906 205.644531 213.089844 205.644531 C 211.675781 205.625 210.265625 205.515625 208.867188 205.320312 Z M 263.914062 178.734375 C 260.058594 177.957031 256.128906 177.597656 252.191406 177.652344 C 241.507812 177.652344 234.335938 183.960938 234.335938 194.769531 C 234.335938 205.574219 241.480469 211.832031 252.191406 211.832031 C 256.347656 211.914062 260.492188 211.324219 264.460938 210.09375 L 264.460938 204.109375 C 261.527344 205.546875 258.320312 206.34375 255.046875 206.449219 C 247.550781 206.449219 243.730469 201.863281 243.730469 194.5625 C 243.730469 188.667969 246.230469 183.078125 254.183594 183.078125 C 257.535156 183.140625 260.84375 183.808594 263.957031 185.042969 Z M 263.914062 178.734375 "/></svg></div>
       <h1><span class="dc-t">ICT Helpdesk</span><span id="dc-dot" class="dc-dot" aria-hidden="true"></span><span class="dc-pilot" title="Deze assistent is in pilot; feedback is welkom">Pilot</span></h1>
+      <button id="dc-info" class="dc-refresh" title="Over deze chat" aria-label="Over deze chat" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>
       <button id="dc-refresh" class="dc-refresh" title="Gesprek opnieuw starten" aria-label="Gesprek opnieuw starten">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
       </button>
@@ -132,6 +146,15 @@
         </button>
       </div>
     </div>
+      <div id="dc-infopanel" class="dc-infopanel" hidden>
+        <div class="dc-infocard" role="dialog" aria-labelledby="dc-info-title">
+          <h2 id="dc-info-title">Over deze chat</h2>
+          <p>Gesprekken met de assistent worden <strong>niet tussentijds opgeslagen</strong>. Sluit je de pagina, dan is het gesprek weg.</p>
+          <p>Pas als de assistent samen met jou een <strong>melding aanmaakt</strong>, komt die in AFAS terecht, precies zoals de assistent hem heeft voorgesteld. De collega's van ICT pakken de melding dan op zoals je gewend bent.</p>
+          <p class="pilot">Deze assistent is een pilotversie. Loop je ergens tegenaan, laat het ICT weten.</p>
+          <button id="dc-info-close" type="button">Begrepen</button>
+        </div>
+      </div>
     </div>
   </div>
   <script>
@@ -193,6 +216,15 @@
     // Opnieuw starten: de AFAS-code in de URL is eenmalig, dus de pagina zelf herladen werkt niet.
     // Eerst proberen de bovenliggende InSite-pagina te verversen (die maakt een nieuwe code aan);
     // lukt dat niet, dan de agent zelf laten resetten via het systeemonderwerp "Gesprek opnieuw starten".
+    (function(){
+      var panel=document.getElementById("dc-infopanel"), btn=document.getElementById("dc-info");
+      function open(){ panel.hidden=false; btn.setAttribute("aria-expanded","true"); document.getElementById("dc-info-close").focus(); }
+      function close(){ panel.hidden=true; btn.setAttribute("aria-expanded","false"); btn.focus(); }
+      btn.addEventListener("click", function(){ panel.hidden ? open() : close(); });
+      document.getElementById("dc-info-close").addEventListener("click", close);
+      panel.addEventListener("click", function(e){ if(e.target===panel) close(); });
+      document.addEventListener("keydown", function(e){ if(e.key==="Escape" && !panel.hidden) close(); });
+    })();
     var chatStore = null;
     document.getElementById("dc-refresh").addEventListener("click", function(){
       try { if(window.top !== window){ window.top.location.reload(); return; } } catch(e){}
