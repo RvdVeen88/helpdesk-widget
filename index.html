@@ -62,8 +62,10 @@
     .dc-infocard button:hover{background:var(--dc-blue-hover);}
 
     /* Nieuwe berichten ploppen zacht in */
-    .webchat__basic-transcript__activity, .pv-row{animation:dc-pop-in .28s cubic-bezier(.2,.8,.3,1.15) both;}
-    @keyframes dc-pop-in{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
+    .webchat__basic-transcript__activity, .pv-row.bot{animation:dc-in-left .32s cubic-bezier(.2,.8,.3,1.1) both;}
+    .webchat__basic-transcript__activity:has(.webchat__bubble--from-user), .pv-row.user{animation:dc-in-right .32s cubic-bezier(.2,.8,.3,1.1) both;}
+    @keyframes dc-in-left{from{opacity:0;transform:translateX(-22px);}to{opacity:1;transform:none;}}
+    @keyframes dc-in-right{from{opacity:0;transform:translateX(22px);}to{opacity:1;transform:none;}}
     @media (prefers-reduced-motion: reduce){.webchat__basic-transcript__activity,.pv-row{animation:none;}}
 
     /* WebChat: 'D'-vorm op bot-bubbels (rechterzijde rond), gespiegeld bij de gebruiker */
