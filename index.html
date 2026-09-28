@@ -243,6 +243,15 @@
   </div>
   <script>
     var FUNCTION_URL = "https://func-dck-helpdesk-b8cpg3gmd6d5hsgp.westeurope-01.azurewebsites.net/api/get-chat-token";
+    var LOG_URL = "https://func-dck-helpdesk-b8cpg3gmd6d5hsgp.westeurope-01.azurewebsites.net/api/log-event";
+    // Gebeurtenissen voor het dashboard (gebruik, meldingen, feedback). Faalt stil; de chat merkt er niets van.
+    var logCtx = { gebruiker: "", gesprek: "" };
+    function logEvent(gebeurtenis, extra){
+      try {
+        var body = Object.assign({ gebeurtenis: gebeurtenis, gebruiker: logCtx.gebruiker, gesprek: logCtx.gesprek }, extra || {});
+        fetch(LOG_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }).catch(function(){});
+      } catch(e){}
+    }
 
     function getCss(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
@@ -340,6 +349,7 @@
             if(card.classList.contains("dc-rated")) return;
             card.classList.add("dc-rated");
             imgs.forEach(function(img, j){ img.src = j <= i ? VOL : UIT; img.classList.remove("dc-preview"); });
+            logEvent("feedback_score", { score: i + 1 });
             var h = card.querySelector(".dc-hint"); if(h) h.remove();
             var r = document.createElement("div"); r.className = "dc-rating";
             r.textContent = "Je beoordeling: " + (i + 1) + " van 5";
@@ -350,8 +360,8 @@
       // Snelle antwoorden: per herkenbare vraag van de assistent een set knoppen onder het bericht
       var SNEL = [
         { test: /^💬.*melding voor je aan/i,
-          knoppen: [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!"],
-                    ["📝", "Maak een melding aan", "Maak een melding voor me aan."]] },
+          knoppen: [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!", "geholpen"],
+                    ["📝", "Maak een melding aan", "Maak een melding voor me aan.", "melding_knop"]] },
         { test: /mag ik de melding aanmaken/i,
           knoppen: [["✅", "Ja, maak de melding aan", "Ja, klopt. Maak de melding aan."],
                     ["✏️", "Ik wil iets aanpassen", "Ik wil nog iets aanpassen aan de samenvatting."]] }
@@ -370,6 +380,7 @@
           b.innerHTML = '<span class="ic">' + k[0] + '</span>' + k[1];
           b.addEventListener("click", function(){
             if(chatStore) chatStore.dispatch({ type:"WEB_CHAT/SEND_MESSAGE", payload:{ text:k[2] } });
+            if(k[3]) logEvent(k[3]);
             wrap.remove();
           });
           wrap.appendChild(b);
@@ -447,6 +458,7 @@
         if(!data.token){ showError("Geen geldig chat-token ontvangen."); return; }
 
         // Token wordt door de Function aangemaakt op het Europese Direct Line-adres; de verbinding moet hetzelfde adres gebruiken.
+        logCtx.gebruiker = data.displayName || data.userId || ""; logCtx.gesprek = data.conversationId || "";
         var directLine = WebChat.createDirectLine({ token:data.token, domain:"https://europe.directline.botframework.com/v3/directline" });
         setTimeout(function(){
           if(!splashHidden && !document.getElementById("status").querySelector("strong")){
@@ -456,7 +468,7 @@
 
         var welcomeSent = false;
         var werk = document.getElementById("dc-werk"), werkTekst = document.getElementById("dc-werk-tekst");
-        var laatsteBot = "", werkTimer = null, feedbackGestuurd = false;
+        var laatsteBot = "", werkTimer = null, feedbackGestuurd = false, wachtOpToelichting = false;
         var bevestiging = /^(ja|jа|klopt|prima|ok|oké|okay|goed zo|maak maar|maak aan|doe maar|graag|top|akkoord)\b/i;
         function toonWerk(userText){
           var afas = /mag ik de melding aanmaken/i.test(laatsteBot) && bevestiging.test(userText.trim());
@@ -483,12 +495,14 @@
         var store = WebChat.createStore({}, function(storeApi){ return function(next){ return function(action){
           if(action.type === "WEB_CHAT/SEND_MESSAGE" && action.payload && action.payload.text){
             var t = action.payload.text; clearTimeout(werkTimer);
+            if(wachtOpToelichting){ wachtOpToelichting = false; if(!/^(nee|nee hoor|nope|geen|niets|nvt|n\.v\.t\.?)\.?$/i.test(t.trim())) logEvent("feedback_toelichting", { tekst: t }); }
             werkTimer = setTimeout(function(){ toonWerk(t); }, 2500);
             setTimeout(function(){ zetBezig(true); }, 50);
           }
           if(action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !welcomeSent){
             welcomeSent = true;
             storeApi.dispatch({ type:"WEB_CHAT/SEND_EVENT", payload:{ name:"startConversation", type:"event", value:"" } });
+            logEvent("gesprek_gestart");
           }
           if(action.type === "DIRECT_LINE/CONNECT_FULFILLED"){ setOnline(true); setTimeout(hideSplash, 15000); }
           if(action.type === "DIRECT_LINE/INCOMING_ACTIVITY" && action.payload && action.payload.activity &&
@@ -496,6 +510,11 @@
             setTimeout(hideSplash, 250);
             laatsteBot = action.payload.activity.text || "";
             verbergWerk(); zetBezig(false);
+            var mNr = laatsteBot.match(/melding is aangemaakt met nummer\s*\**\s*([0-9]{3,})/i);
+            if(mNr) logEvent("melding_aangemaakt", { nummer: mNr[1] });
+            var mArt = laatsteBot.match(/Volledige handleiding:\*{0,2}\s*\[([^\]]+)\]/i);
+            if(mArt) logEvent("artikel", { artikel: mArt[1] });
+            wachtOpToelichting = /toelichten waarom je deze score/i.test(laatsteBot);
             // Na het slotbericht met het meldingsnummer: feedbackonderwerp starten via een (onzichtbare) gebeurtenis
             if(/melding is aangemaakt/i.test(laatsteBot) && !feedbackGestuurd){
               feedbackGestuurd = true;
