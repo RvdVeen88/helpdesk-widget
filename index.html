@@ -74,11 +74,9 @@
     /* Introkaart (eerste keer) */
     .dc-intro{z-index:7;}
     .dc-intro .dc-infocard{animation:dc-kaart-in .5s cubic-bezier(.2,.8,.3,1.1) both;position:relative;overflow:hidden;}
-    .dc-intro .dc-infocard::before{content:"";position:absolute;top:-60px;right:-60px;width:160px;height:160px;border-radius:0 50% 50% 0;background:var(--dc-lichtblauw);opacity:.35;pointer-events:none;}
-    .dc-intro .dc-infocard > *{position:relative;}
     @keyframes dc-kaart-in{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:none;}}
     .dc-nieuw{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dc-blauw);background:var(--dc-lichtblauw);border-radius:999px;padding:3px 10px;margin-bottom:10px;position:relative;}
-    .dc-nieuw .spark{display:inline-block;animation:dc-spark 1.6s ease-in-out infinite;}
+    .dc-nieuw .spark{display:inline-block;color:#F2C94C;font-size:13px;text-shadow:0 0 4px rgba(242,201,76,.6);animation:dc-spark 1.6s ease-in-out infinite;}
     @keyframes dc-spark{0%,100%{transform:scale(1) rotate(0);opacity:1;}50%{transform:scale(1.4) rotate(20deg);opacity:.6;}}
     .dc-intro-lijst{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-direction:column;gap:9px;}
     .dc-intro-lijst li{display:flex;gap:10px;align-items:flex-start;line-height:1.45;}
@@ -200,14 +198,14 @@
       <div id="dc-intro" class="dc-infopanel dc-intro" hidden>
         <div class="dc-infocard" role="dialog" aria-labelledby="dc-intro-title">
           <div class="dc-nieuw"><span class="spark" aria-hidden="true">✦</span> Nieuw</div>
-          <h2 id="dc-intro-title">Hoi, ik ben de ICT Assistent</h2>
-          <p>Ik ben nieuw bij DC Klinieken en help je met al je ICT-vragen, direct vanuit dit portaal.</p>
+          <h2 id="dc-intro-title">Hoi! Ik ben de ICT Assistent 👋</h2>
+          <p>Gloednieuw bij DC Klinieken: vanaf nu stel je je ICT-vraag gewoon hier, en ik ga meteen voor je aan de slag.</p>
           <ul class="dc-intro-lijst">
-            <li><span class="ic">📚</span><span>Ik zoek meteen in de ICT-instructies en geef je de link naar het juiste document.</span></li>
-            <li><span class="ic">📝</span><span>Kom ik er niet uit, dan maak ik samen met jou een melding aan voor ICT. Je hoeft zelf geen formulier in te vullen.</span></li>
-            <li><span class="ic">💬</span><span>Dit is een pilot. Aan het einde van elk gesprek vraag ik kort je mening; daar leren we van.</span></li>
+            <li><span class="ic">📚</span><span>Ik zoek direct in alle ICT-instructies en geef je de link naar het juiste document. Vaak ben je zo weer verder.</span></li>
+            <li><span class="ic">📝</span><span>Lukt het niet? Dan maak ik samen met jou in een paar vragen een melding aan voor ICT. Geen formulieren meer!</span></li>
+            <li><span class="ic">💬</span><span>Ik ben nog in pilot, dus aan het einde vraag ik kort wat je ervan vond. Jouw mening maakt me beter.</span></li>
           </ul>
-          <button id="dc-intro-close" type="button">Aan de slag</button>
+          <button id="dc-intro-close" type="button">Probeer het meteen 🚀</button>
         </div>
       </div>
       <div id="dc-infopanel" class="dc-infopanel" hidden>
