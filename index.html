@@ -381,12 +381,22 @@
         var sep = FUNCTION_URL.indexOf("?") === -1 ? "?" : "&";
         var url = FUNCTION_URL + sep + "tokenurl=" + encodeURIComponent(afas.tokenurl) + "&code=" + encodeURIComponent(afas.code);
 
-        var resp = await fetch(url, { method:"GET" });
+        var ctrl = new AbortController(); var tmo = setTimeout(function(){ ctrl.abort(); }, 30000);
+        var resp;
+        try { resp = await fetch(url, { method:"GET", signal: ctrl.signal }); }
+        catch(e){ showError("De helpdesk reageert niet (time-out na 30 s). Ververs de InSite-pagina (F5) of probeer het later opnieuw."); return; }
+        finally { clearTimeout(tmo); }
         if(!resp.ok){ var t = await resp.text(); showError("Kon de helpdesk niet starten (" + resp.status + "). " + t + "<br><br>Ververs de InSite-pagina (F5) en probeer het opnieuw."); return; }
         var data = await resp.json();
         if(!data.token){ showError("Geen geldig chat-token ontvangen."); return; }
 
-        var directLine = WebChat.createDirectLine({ token:data.token });
+        // Token wordt door de Function aangemaakt op het Europese Direct Line-adres; de verbinding moet hetzelfde adres gebruiken.
+        var directLine = WebChat.createDirectLine({ token:data.token, domain:"https://europe.directline.botframework.com/v3/directline" });
+        setTimeout(function(){
+          if(!splashHidden && !document.getElementById("status").querySelector("strong")){
+            showError("De assistent geeft geen antwoord. Ververs de InSite-pagina (F5); blijft dit zo, meld het dan bij ICT.");
+          }
+        }, 40000);
 
         var welcomeSent = false;
         var werk = document.getElementById("dc-werk"), werkTekst = document.getElementById("dc-werk-tekst");
@@ -437,6 +447,7 @@
             }
           }
           if(action.type === "DIRECT_LINE/DISCONNECT_FULFILLED" || action.type === "DIRECT_LINE/CONNECT_REJECTED"){ setOnline(false); }
+          if(action.type === "DIRECT_LINE/CONNECT_REJECTED"){ showError("De verbinding met de assistent is geweigerd. Mogelijk wordt de agent net gepubliceerd; probeer het over een minuut opnieuw (F5 op de InSite-pagina)."); }
           return next(action);
         }; }; });
         chatStore = store;
