@@ -113,15 +113,15 @@
     .webchat__basic-transcript__activity-indicator, .webchat__basic-transcript__focus-indicator{display:none !important;}
     .webchat__basic-transcript:focus, .webchat__basic-transcript__activity:focus{outline:none !important;}
     /* Instructies leesbaar: nette nummering, ruimte tussen stappen, vetgedrukt in blauw */
-    .webchat__bubble__content ol{padding-left:0;margin:6px 0 8px;list-style:none;counter-reset:dcstap;}
-    .webchat__bubble__content ol li{counter-increment:dcstap;position:relative;padding-left:28px;margin:0 0 7px;line-height:1.45;}
+    .webchat__bubble__content ol{padding-left:0;margin:4px 0 6px;list-style:none;counter-reset:dcstap;}
+    .webchat__bubble__content ol li{counter-increment:dcstap;position:relative;padding-left:26px;margin:0 0 2px;line-height:1.35;}
     .webchat__bubble__content ol li::before{content:counter(dcstap) ".";position:absolute;left:0;top:0;width:22px;text-align:right;color:var(--dc-blauw);font-weight:700;}
     .webchat__bubble__content ul{padding-left:18px;margin:6px 0 8px;}
-    .webchat__bubble__content ul li{margin:0 0 5px;line-height:1.45;}
+    .webchat__bubble__content ul li{margin:0 0 2px;line-height:1.35;}
     .webchat__bubble__content strong{color:var(--dc-blauw);font-weight:700;}
     .webchat__bubble--from-user .webchat__bubble__content strong{color:#fff;}
     .webchat__bubble__content code{background:#fff;border:1px solid var(--dc-lichtblauw);border-radius:5px;padding:1px 6px;font-family:Consolas,Menlo,monospace;font-size:13px;color:var(--dc-blauw);}
-    .webchat__bubble__content p{margin:0 0 8px;}
+    .webchat__bubble__content p{margin:0 0 6px;}
     .webchat__bubble--from-user .webchat__bubble__content a{color:#fff;}
     .webchat__send-box__text-box__input{font-family:var(--dc-font) !important;}
     .webchat__typing-indicator, .webchat__typingIndicator{background:var(--dc-bubble-bot);border-radius:6px 18px 18px 6px;padding:8px 10px;margin-left:44px;display:inline-block;}
