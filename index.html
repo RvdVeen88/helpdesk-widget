@@ -348,8 +348,10 @@
         if(!bubbels.length) return;
         var laatste = bubbels[bubbels.length - 1];
         if(laatste.querySelector(".dc-snel")) return;
-        var regels = (laatste.textContent || "").split("\n").map(function(r){ return r.trim(); }).filter(Boolean);
-        if(!regels.length || !AFSLUIT.test(regels[regels.length - 1])) return;
+        // Laatste tekstblok (markdown wordt als losse <p>/<li> gerenderd, dus niet op regeleinden splitsen)
+        var blokken = Array.prototype.slice.call(laatste.querySelectorAll("p, li, h1, h2, h3, h4, blockquote")).filter(function(b){ return !b.closest(".dc-snel") && (b.textContent || "").trim(); });
+        var laatsteTekst = blokken.length ? blokken[blokken.length - 1].textContent : (laatste.textContent || "");
+        if(!AFSLUIT.test(laatsteTekst.trim())) return;
         var wrap = document.createElement("div"); wrap.className = "dc-snel";
         [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen. Bedankt!"],
          ["📝", "Maak een melding aan", "Nee, dit heeft niet geholpen. Maak een melding voor me aan."]].forEach(function(k){
