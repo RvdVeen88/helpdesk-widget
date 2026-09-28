@@ -342,13 +342,14 @@
         });
       }
       // Snelle antwoorden onder de afsluitvraag ("Helpt dit, of zal ik een melding voor je aanmaken?")
-      var AFSLUIT = /zal ik (direct |dan )?(een )?melding (voor je )?aanmaken/i;
+      var AFSLUIT = /melding (voor je |voor jou )?aan/i; // laatste regel bevat "melding voor je aan…"
       function knoppen(){
         var bubbels = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content");
         if(!bubbels.length) return;
         var laatste = bubbels[bubbels.length - 1];
         if(laatste.querySelector(".dc-snel")) return;
-        if(!AFSLUIT.test(laatste.textContent || "")) return;
+        var regels = (laatste.textContent || "").split("\n").map(function(r){ return r.trim(); }).filter(Boolean);
+        if(!regels.length || !AFSLUIT.test(regels[regels.length - 1])) return;
         var wrap = document.createElement("div"); wrap.className = "dc-snel";
         [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen. Bedankt!"],
          ["📝", "Maak een melding aan", "Nee, dit heeft niet geholpen. Maak een melding voor me aan."]].forEach(function(k){
