@@ -62,10 +62,11 @@
     @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
 
     /* Sterrenkaart */
-    .dc-star-locked{pointer-events:none;}
-    .dc-star-on{background:var(--dc-lichtblauw) !important;border-color:var(--dc-blauw) !important;}
+    .dc-rated [role="button"], .dc-rated .ac-selectable, .dc-rated button{pointer-events:none;}
+    .dc-star-on{background:var(--dc-lichtblauw);border-radius:8px;}
     .dc-star-on img, .dc-star-on svg{filter:brightness(0) saturate(100%) invert(14%) sepia(72%) saturate(3300%) hue-rotate(212deg) brightness(90%);}
-    .dc-rating{margin:6px 12px 10px;font-size:14px;font-weight:600;color:var(--dc-blauw);letter-spacing:1px;}
+    .dc-star-off{opacity:.3;}
+    .dc-rating{margin:8px 12px 10px;font-size:13.5px;font-weight:600;color:var(--dc-blauw);}
     /* Infopaneel */
     .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
     .dc-infopanel[hidden]{display:none;}
@@ -241,6 +242,23 @@
       splashHidden = true; clearInterval(splashTimer);
       document.getElementById("status").classList.add("is-hidden");
     }
+    // Sterren-kaart (tevredenheid): na een klik de gekozen score zichtbaar maken en de kaart vergrendelen.
+    // De sterren zijn geen knoppen maar klikbare kolommen/afbeeldingen (Adaptive Card selectAction).
+    document.getElementById("webchat").addEventListener("click", function(e){
+      var card = e.target.closest(".webchat__adaptive-card-renderer, .ac-adaptiveCard"); if(!card) return;
+      if(card.classList.contains("dc-rated")) return;
+      var kandidaten = Array.prototype.slice.call(card.querySelectorAll('[role="button"], .ac-selectable, button'))
+        .filter(function(el){ return el.offsetParent !== null && !el.querySelector('[role="button"], .ac-selectable, button'); });
+      if(kandidaten.length !== 5) return;
+      var geklikt = kandidaten.filter(function(el){ return el === e.target || el.contains(e.target); })[0];
+      if(!geklikt) return;
+      var score = kandidaten.indexOf(geklikt) + 1;
+      card.classList.add("dc-rated");
+      kandidaten.forEach(function(el, i){ el.classList.add(i < score ? "dc-star-on" : "dc-star-off"); });
+      var r = document.createElement("div"); r.className = "dc-rating";
+      r.textContent = "Je beoordeling: " + "★".repeat(score) + "☆".repeat(5 - score) + " (" + score + " van 5)";
+      card.appendChild(r);
+    }, true);
     function showError(msg){
       clearInterval(splashTimer);
       var s=document.getElementById("status");
