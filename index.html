@@ -61,6 +61,11 @@
     @keyframes dc-draai{to{transform:rotate(360deg);}}
     @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
 
+    /* Sterrenkaart */
+    .dc-star-locked{pointer-events:none;}
+    .dc-star-on{background:var(--dc-lichtblauw) !important;border-color:var(--dc-blauw) !important;}
+    .dc-star-on img, .dc-star-on svg{filter:brightness(0) saturate(100%) invert(14%) sepia(72%) saturate(3300%) hue-rotate(212deg) brightness(90%);}
+    .dc-rating{margin:6px 12px 10px;font-size:14px;font-weight:600;color:var(--dc-blauw);letter-spacing:1px;}
     /* Infopaneel */
     .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
     .dc-infopanel[hidden]{display:none;}
@@ -171,7 +176,7 @@
         <span class="dc-werk-icoon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         </span>
-        <span id="dc-werk-tekst">Ik doorzoek de kennisbank…</span>
+        <span id="dc-werk-tekst">Ik zoek het beste antwoord voor je…</span>
       </div>
       <div id="dc-infopanel" class="dc-infopanel" hidden>
         <div class="dc-infocard" role="dialog" aria-labelledby="dc-info-title">
@@ -299,12 +304,12 @@
 
         var welcomeSent = false;
         var werk = document.getElementById("dc-werk"), werkTekst = document.getElementById("dc-werk-tekst");
-        var laatsteBot = "", werkTimer = null;
+        var laatsteBot = "", werkTimer = null, feedbackGestuurd = false;
         var bevestiging = /^(ja|jа|klopt|prima|ok|oké|okay|goed zo|maak maar|maak aan|doe maar|graag|top|akkoord)\b/i;
         function toonWerk(userText){
           var afas = /mag ik de melding aanmaken/i.test(laatsteBot) && bevestiging.test(userText.trim());
           werk.classList.toggle("afas", afas);
-          werkTekst.textContent = afas ? "Ik maak je melding aan in AFAS, een moment…" : "Ik doorzoek de kennisbank, dit kan even duren…";
+          werkTekst.textContent = afas ? "Ik maak je melding aan in AFAS, een moment…" : "Ik zoek het beste antwoord voor je, dit kan even duren…";
           var svg = werk.querySelector("svg");
           svg.innerHTML = afas
             ? '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>'
@@ -339,6 +344,11 @@
             setTimeout(hideSplash, 250);
             laatsteBot = action.payload.activity.text || "";
             verbergWerk(); zetBezig(false);
+            // Na het slotbericht met het meldingsnummer: feedbackonderwerp starten via een (onzichtbare) gebeurtenis
+            if(/melding is aangemaakt/i.test(laatsteBot) && !feedbackGestuurd){
+              feedbackGestuurd = true;
+              setTimeout(function(){ storeApi.dispatch({ type:"WEB_CHAT/SEND_EVENT", payload:{ name:"feedbackStarten", type:"event", value:"" } }); }, 2500);
+            }
           }
           if(action.type === "DIRECT_LINE/DISCONNECT_FULFILLED" || action.type === "DIRECT_LINE/CONNECT_REJECTED"){ setOnline(false); }
           return next(action);
