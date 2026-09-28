@@ -74,6 +74,7 @@
     .webchat__bubble__content a{color:var(--dc-link);font-weight:600;}
     .webchat__bubble--from-user .webchat__bubble__content a{color:#fff;}
     .webchat__send-box__text-box__input{font-family:var(--dc-font) !important;}
+    .webchat__typing-indicator, .webchat__typingIndicator{background:var(--dc-bubble-bot);border-radius:6px 18px 18px 6px;padding:8px 10px;margin-left:44px;display:inline-block;}
     /* Avatar-initialen: vet en exact gecentreerd */
     .webchat__initialsAvatar, .webchat__defaultAvatar{display:flex !important;align-items:center;justify-content:center;}
     .webchat__initialsAvatar__initials, .webchat__defaultAvatar__initials{font-family:var(--dc-font) !important;font-weight:700 !important;font-size:13px !important;line-height:1 !important;letter-spacing:.2px;padding:0 !important;margin:0 !important;}
@@ -194,7 +195,14 @@
       groupTimestamp: 60000, timestampColor: getCss("--dc-text-soft"),
       suggestedActionBackgroundColor: "#FFFFFF", suggestedActionBorderColor: getCss("--dc-blue"),
       suggestedActionTextColor: getCss("--dc-blue"), suggestedActionBorderRadius: 999,
-      typingAnimationBackgroundImage: "none"
+      // 'Aan het typen'-indicator: drie pulserende bolletjes in DC-blauw
+      typingAnimationBackgroundImage: "url(\"data:image/svg+xml;utf8," + encodeURIComponent(
+        '<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'20\' viewBox=\'0 0 64 20\'>' +
+        '<circle cx=\'14\' cy=\'10\' r=\'4\' fill=\'#053787\'><animate attributeName=\'opacity\' values=\'.25;1;.25\' dur=\'1.2s\' repeatCount=\'indefinite\' begin=\'0s\'/></circle>' +
+        '<circle cx=\'32\' cy=\'10\' r=\'4\' fill=\'#053787\'><animate attributeName=\'opacity\' values=\'.25;1;.25\' dur=\'1.2s\' repeatCount=\'indefinite\' begin=\'.2s\'/></circle>' +
+        '<circle cx=\'50\' cy=\'10\' r=\'4\' fill=\'#053787\'><animate attributeName=\'opacity\' values=\'.25;1;.25\' dur=\'1.2s\' repeatCount=\'indefinite\' begin=\'.4s\'/></circle></svg>') + "\")",
+      typingAnimationWidth: 64, typingAnimationHeight: 20,
+      typingAnimationDuration: 30000
     };
 
     // Opstartscherm: wisselende statusregels, verdwijnt bij het eerste bericht van de agent
