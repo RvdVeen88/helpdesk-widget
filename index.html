@@ -62,12 +62,11 @@
     @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
 
     /* Sterrenkaart */
-    .dc-star{cursor:pointer;text-align:center;}
-    .dc-star-svg{display:block;width:34px;height:34px;margin:0 auto 2px;fill:#FFFFFF;stroke:#B8C2D6;stroke-width:1.6;stroke-linejoin:round;transition:fill .15s,stroke .15s,transform .15s;}
-    .dc-star.dc-hover .dc-star-svg{fill:#F6D98A;stroke:#D9AE3C;transform:scale(1.12);}
-    .dc-star.dc-star-on .dc-star-svg{fill:#F2C94C;stroke:#D9AE3C;}
-    .dc-star.dc-star-off .dc-star-svg{opacity:.45;}
+    .dc-star{cursor:pointer;}
+    .dc-star-img{transition:transform .15s;}
+    .dc-star:hover .dc-star-img{transform:scale(1.12);}
     .dc-rated .dc-star{pointer-events:none;cursor:default;}
+    .dc-rated .dc-star-img{transform:none;}
     .dc-rating{margin:8px 12px 10px;font-size:13.5px;font-weight:600;color:var(--dc-blauw);}
     /* Infopaneel */
     .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
@@ -244,34 +243,35 @@
       splashHidden = true; clearInterval(splashTimer);
       document.getElementById("status").classList.add("is-hidden");
     }
-    // Sterren-kaart (tevredenheid): eigen gele sterren met hover-voorbeeld; na een klik vergrendeld.
+    // Sterren-kaart (tevredenheid): de sterafbeeldingen van Microsoft vervangen door eigen sterren
+    // (grijs leeg, geel bij hover en na keuze). Na een klik wordt de kaart vergrendeld.
     (function(){
-      var STAR = '<svg class="dc-star-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.3l-6 3.3 1.3-6.6L2.4 9.4l6.7-.8z"/></svg>';
-      function selectables(card){
-        return Array.prototype.slice.call(card.querySelectorAll('[role="button"], .ac-selectable'))
-          .filter(function(el){ return el.offsetParent !== null && !el.querySelector('[role="button"], .ac-selectable'); });
+      function ster(vulling, rand){
+        return "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.3l-6 3.3 1.3-6.6L2.4 9.4l6.7-.8z" fill="'+vulling+'" stroke="'+rand+'" stroke-width="1.5" stroke-linejoin="round"/></svg>');
       }
+      var LEEG = ster("#FFFFFF","#B8C2D6"), HOVER = ster("#F6D98A","#D9AE3C"), VOL = ster("#F2C94C","#D9AE3C"), UIT = ster("#F3F5F9","#D5DBE6");
       function decorate(card){
         if(card.classList.contains("dc-stars")) return;
-        var st = selectables(card); if(st.length !== 5) return;
+        if(card.querySelector(".webchat__adaptive-card-renderer, .ac-adaptiveCard")) return; // alleen de binnenste kaart
+        var imgs = Array.prototype.slice.call(card.querySelectorAll("img"));
+        if(imgs.length !== 5) return;
+        var st = imgs.map(function(img){ return img.closest('[role="button"], .ac-selectable') || img; });
         card.classList.add("dc-stars");
+        function zet(n, src){ imgs.forEach(function(img, j){ if(j < n) img.src = src; }); }
+        imgs.forEach(function(img){ img.src = LEEG; img.classList.add("dc-star-img"); });
         st.forEach(function(el, i){
-          el.classList.add("dc-star"); el.dataset.dcIndex = i;
-          var img = el.querySelector("img"); if(img) img.style.display = "none";
-          el.insertAdjacentHTML("afterbegin", STAR);
-          el.addEventListener("mouseenter", function(){ if(card.classList.contains("dc-rated")) return; st.forEach(function(x, j){ x.classList.toggle("dc-hover", j <= i); }); });
-          el.addEventListener("mouseleave", function(){ st.forEach(function(x){ x.classList.remove("dc-hover"); }); });
+          el.classList.add("dc-star");
+          el.addEventListener("mouseenter", function(){ if(card.classList.contains("dc-rated")) return; imgs.forEach(function(img, j){ img.src = j <= i ? HOVER : LEEG; }); });
+          el.addEventListener("mouseleave", function(){ if(card.classList.contains("dc-rated")) return; imgs.forEach(function(img){ img.src = LEEG; }); });
+          el.addEventListener("click", function(){
+            if(card.classList.contains("dc-rated")) return;
+            card.classList.add("dc-rated");
+            imgs.forEach(function(img, j){ img.src = j <= i ? VOL : UIT; });
+            var r = document.createElement("div"); r.className = "dc-rating";
+            r.textContent = "Je beoordeling: " + (i + 1) + " van 5";
+            card.appendChild(r);
+          }, true);
         });
-        card.addEventListener("click", function(e){
-          if(card.classList.contains("dc-rated")) return;
-          var hit = st.filter(function(el){ return el === e.target || el.contains(e.target); })[0]; if(!hit) return;
-          var score = Number(hit.dataset.dcIndex) + 1;
-          card.classList.add("dc-rated");
-          st.forEach(function(x, j){ x.classList.remove("dc-hover"); x.classList.toggle("dc-star-on", j < score); x.classList.toggle("dc-star-off", j >= score); });
-          var r = document.createElement("div"); r.className = "dc-rating";
-          r.textContent = "Je beoordeling: " + score + " van 5";
-          card.appendChild(r);
-        }, true);
       }
       var host = document.getElementById("webchat");
       new MutationObserver(function(){
