@@ -50,6 +50,15 @@
     .dc-refresh:hover{opacity:1;background:rgba(255,255,255,.18);}
     @media (prefers-reduced-motion: reduce){.dc-dot,.dc-orb .core,.dc-orb .ring,.dots i{animation:none;}}
 
+    /* Bezig-balk: verschijnt als een antwoord langer dan 2,5 s op zich laat wachten */
+    .dc-werk{position:absolute;left:12px;right:12px;bottom:60px;z-index:4;display:flex;align-items:center;gap:10px;padding:9px 14px;background:#fff;color:var(--dc-blauw);border:1px solid var(--dc-lichtblauw);border-radius:6px 18px 18px 6px;box-shadow:0 6px 18px rgba(5,55,135,.12);font-size:13px;font-weight:500;animation:dc-in .3s ease both;}
+    .dc-werk[hidden]{display:none;}
+    .dc-werk-icoon{display:flex;color:var(--dc-blauw);animation:dc-zoek 1.6s ease-in-out infinite;transform-origin:60% 60%;}
+    @keyframes dc-zoek{0%,100%{transform:translate(0,0) rotate(0deg);}25%{transform:translate(2px,-2px) rotate(-8deg);}50%{transform:translate(-1px,2px) rotate(6deg);}75%{transform:translate(2px,1px) rotate(-4deg);}}
+    .dc-werk.afas .dc-werk-icoon{animation:dc-draai 1.2s linear infinite;}
+    @keyframes dc-draai{to{transform:rotate(360deg);}}
+    @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
+
     /* Infopaneel */
     .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
     .dc-infopanel[hidden]{display:none;}
@@ -156,6 +165,12 @@
         </button>
       </div>
     </div>
+      <div id="dc-werk" class="dc-werk" hidden aria-live="polite">
+        <span class="dc-werk-icoon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </span>
+        <span id="dc-werk-tekst">Ik doorzoek de kennisbank…</span>
+      </div>
       <div id="dc-infopanel" class="dc-infopanel" hidden>
         <div class="dc-infocard" role="dialog" aria-labelledby="dc-info-title">
           <h2 id="dc-info-title">Over deze chat</h2>
@@ -281,7 +296,25 @@
         var directLine = WebChat.createDirectLine({ token:data.token });
 
         var welcomeSent = false;
+        var werk = document.getElementById("dc-werk"), werkTekst = document.getElementById("dc-werk-tekst");
+        var laatsteBot = "", werkTimer = null;
+        var bevestiging = /^(ja|jа|klopt|prima|ok|oké|okay|goed zo|maak maar|maak aan|doe maar|graag|top|akkoord)\b/i;
+        function toonWerk(userText){
+          var afas = /mag ik de melding aanmaken/i.test(laatsteBot) && bevestiging.test(userText.trim());
+          werk.classList.toggle("afas", afas);
+          werkTekst.textContent = afas ? "Ik maak je melding aan in AFAS, een moment…" : "Ik doorzoek de kennisbank, dit kan even duren…";
+          var svg = werk.querySelector("svg");
+          svg.innerHTML = afas
+            ? '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>'
+            : '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>';
+          werk.hidden = false;
+        }
+        function verbergWerk(){ clearTimeout(werkTimer); werkTimer = null; werk.hidden = true; }
         var store = WebChat.createStore({}, function(storeApi){ return function(next){ return function(action){
+          if(action.type === "WEB_CHAT/SEND_MESSAGE" && action.payload && action.payload.text){
+            var t = action.payload.text; clearTimeout(werkTimer);
+            werkTimer = setTimeout(function(){ toonWerk(t); }, 2500);
+          }
           if(action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !welcomeSent){
             welcomeSent = true;
             storeApi.dispatch({ type:"WEB_CHAT/SEND_EVENT", payload:{ name:"startConversation", type:"event", value:"" } });
@@ -290,6 +323,8 @@
           if(action.type === "DIRECT_LINE/INCOMING_ACTIVITY" && action.payload && action.payload.activity &&
              action.payload.activity.type === "message" && action.payload.activity.from && action.payload.activity.from.role === "bot"){
             setTimeout(hideSplash, 250);
+            laatsteBot = action.payload.activity.text || "";
+            verbergWerk();
           }
           if(action.type === "DIRECT_LINE/DISCONNECT_FULFILLED" || action.type === "DIRECT_LINE/CONNECT_REJECTED"){ setOnline(false); }
           return next(action);
