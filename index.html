@@ -61,6 +61,10 @@
     @keyframes dc-draai{to{transform:rotate(360deg);}}
     @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
 
+    /* Ja/Nee-knoppen van Copilot Studio in dezelfde stijl als onze snelle antwoorden */
+    .webchat__suggested-actions{padding:6px 12px 8px 56px !important;}
+    .webchat__suggested-action{font-family:var(--dc-font) !important;font-weight:600 !important;font-size:13px !important;padding:0 14px !important;}
+    .webchat__suggested-action:hover{background:var(--dc-blauw) !important;color:#fff !important;}
     /* Snelle antwoorden */
     .dc-snel{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px;}
     .dc-snel button{font-family:var(--dc-font);font-size:13px;font-weight:600;padding:7px 14px 7px 10px;border-radius:999px;border:1.5px solid var(--dc-blauw);background:#fff;color:var(--dc-blauw);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s;}
@@ -262,8 +266,10 @@
       userAvatarBackgroundColor: getCss("--dc-avatar-user"), userAvatarInitials: "Ik",
       avatarSize: 34, avatarBorderRadius: "4px 50% 50% 4px",
       groupTimestamp: 60000, timestampColor: getCss("--dc-text-soft"),
-      suggestedActionBackgroundColor: "#FFFFFF", suggestedActionBorderColor: getCss("--dc-blue"),
-      suggestedActionTextColor: getCss("--dc-blue"), suggestedActionBorderRadius: 999,
+      suggestedActionLayout: "flow", suggestedActionsFlowMaxHeight: 120,
+      suggestedActionBackgroundColor: "#FFFFFF", suggestedActionBorderColor: getCss("--dc-blue"), suggestedActionBorderWidth: 1.5,
+      suggestedActionTextColor: getCss("--dc-blue"), suggestedActionBorderRadius: 999, suggestedActionHeight: 34,
+      suggestedActionBackgroundColorOnHover: getCss("--dc-blue"), suggestedActionTextColorOnHover: "#FFFFFF",
       // 'Aan het typen'-indicator: drie pulserende bolletjes in DC-blauw
       typingAnimationBackgroundImage: "url(\"data:image/svg+xml;utf8," + encodeURIComponent(
         '<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'20\' viewBox=\'0 0 64 20\'>' +
@@ -341,20 +347,25 @@
           }, true);
         });
       }
-      // Snelle antwoorden onder de afsluitvraag ("Helpt dit, of zal ik een melding voor je aanmaken?")
-      var AFSLUIT = /^💬.*melding voor je aan/i; // laatste regel begint met 💬 en bevat "melding voor je aan"
+      // Snelle antwoorden: per herkenbare vraag van de assistent een set knoppen onder het bericht
+      var SNEL = [
+        { test: /^💬.*melding voor je aan/i,
+          knoppen: [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!"],
+                    ["📝", "Maak een melding aan", "Maak een melding voor me aan."]] },
+        { test: /mag ik de melding aanmaken/i,
+          knoppen: [["✅", "Ja, maak de melding aan", "Ja, klopt. Maak de melding aan."],
+                    ["✏️", "Ik wil iets aanpassen", "Ik wil nog iets aanpassen aan de samenvatting."]] }
+      ];
       function knoppen(){
         var bubbels = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content");
         if(!bubbels.length) return;
         var laatste = bubbels[bubbels.length - 1];
         if(laatste.querySelector(".dc-snel")) return;
-        // Laatste tekstblok (markdown wordt als losse <p>/<li> gerenderd, dus niet op regeleinden splitsen)
         var blokken = Array.prototype.slice.call(laatste.querySelectorAll("p, li, h1, h2, h3, h4, blockquote")).filter(function(b){ return !b.closest(".dc-snel") && (b.textContent || "").trim(); });
-        var laatsteTekst = blokken.length ? blokken[blokken.length - 1].textContent : (laatste.textContent || "");
-        if(!AFSLUIT.test(laatsteTekst.trim())) return;
+        var laatsteTekst = (blokken.length ? blokken[blokken.length - 1].textContent : (laatste.textContent || "")).trim();
+        var set = SNEL.filter(function(p){ return p.test.test(laatsteTekst); })[0]; if(!set) return;
         var wrap = document.createElement("div"); wrap.className = "dc-snel";
-        [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!"],
-         ["📝", "Maak een melding aan", "Maak een melding voor me aan."]].forEach(function(k){
+        set.knoppen.forEach(function(k){
           var b = document.createElement("button"); b.type = "button";
           b.innerHTML = '<span class="ic">' + k[0] + '</span>' + k[1];
           b.addEventListener("click", function(){
