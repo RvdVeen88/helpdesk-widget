@@ -62,10 +62,12 @@
     @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
 
     /* Sterrenkaart */
-    .dc-rated [role="button"], .dc-rated .ac-selectable, .dc-rated button{pointer-events:none;}
-    .dc-star-on{background:var(--dc-lichtblauw);border-radius:8px;}
-    .dc-star-on img, .dc-star-on svg{filter:brightness(0) saturate(100%) invert(14%) sepia(72%) saturate(3300%) hue-rotate(212deg) brightness(90%);}
-    .dc-star-off{opacity:.3;}
+    .dc-star{cursor:pointer;text-align:center;}
+    .dc-star-svg{display:block;width:34px;height:34px;margin:0 auto 2px;fill:#FFFFFF;stroke:#B8C2D6;stroke-width:1.6;stroke-linejoin:round;transition:fill .15s,stroke .15s,transform .15s;}
+    .dc-star.dc-hover .dc-star-svg{fill:#F6D98A;stroke:#D9AE3C;transform:scale(1.12);}
+    .dc-star.dc-star-on .dc-star-svg{fill:#F2C94C;stroke:#D9AE3C;}
+    .dc-star.dc-star-off .dc-star-svg{opacity:.45;}
+    .dc-rated .dc-star{pointer-events:none;cursor:default;}
     .dc-rating{margin:8px 12px 10px;font-size:13.5px;font-weight:600;color:var(--dc-blauw);}
     /* Infopaneel */
     .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
@@ -242,23 +244,40 @@
       splashHidden = true; clearInterval(splashTimer);
       document.getElementById("status").classList.add("is-hidden");
     }
-    // Sterren-kaart (tevredenheid): na een klik de gekozen score zichtbaar maken en de kaart vergrendelen.
-    // De sterren zijn geen knoppen maar klikbare kolommen/afbeeldingen (Adaptive Card selectAction).
-    document.getElementById("webchat").addEventListener("click", function(e){
-      var card = e.target.closest(".webchat__adaptive-card-renderer, .ac-adaptiveCard"); if(!card) return;
-      if(card.classList.contains("dc-rated")) return;
-      var kandidaten = Array.prototype.slice.call(card.querySelectorAll('[role="button"], .ac-selectable, button'))
-        .filter(function(el){ return el.offsetParent !== null && !el.querySelector('[role="button"], .ac-selectable, button'); });
-      if(kandidaten.length !== 5) return;
-      var geklikt = kandidaten.filter(function(el){ return el === e.target || el.contains(e.target); })[0];
-      if(!geklikt) return;
-      var score = kandidaten.indexOf(geklikt) + 1;
-      card.classList.add("dc-rated");
-      kandidaten.forEach(function(el, i){ el.classList.add(i < score ? "dc-star-on" : "dc-star-off"); });
-      var r = document.createElement("div"); r.className = "dc-rating";
-      r.textContent = "Je beoordeling: " + "★".repeat(score) + "☆".repeat(5 - score) + " (" + score + " van 5)";
-      card.appendChild(r);
-    }, true);
+    // Sterren-kaart (tevredenheid): eigen gele sterren met hover-voorbeeld; na een klik vergrendeld.
+    (function(){
+      var STAR = '<svg class="dc-star-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.3l-6 3.3 1.3-6.6L2.4 9.4l6.7-.8z"/></svg>';
+      function selectables(card){
+        return Array.prototype.slice.call(card.querySelectorAll('[role="button"], .ac-selectable'))
+          .filter(function(el){ return el.offsetParent !== null && !el.querySelector('[role="button"], .ac-selectable'); });
+      }
+      function decorate(card){
+        if(card.classList.contains("dc-stars")) return;
+        var st = selectables(card); if(st.length !== 5) return;
+        card.classList.add("dc-stars");
+        st.forEach(function(el, i){
+          el.classList.add("dc-star"); el.dataset.dcIndex = i;
+          var img = el.querySelector("img"); if(img) img.style.display = "none";
+          el.insertAdjacentHTML("afterbegin", STAR);
+          el.addEventListener("mouseenter", function(){ if(card.classList.contains("dc-rated")) return; st.forEach(function(x, j){ x.classList.toggle("dc-hover", j <= i); }); });
+          el.addEventListener("mouseleave", function(){ st.forEach(function(x){ x.classList.remove("dc-hover"); }); });
+        });
+        card.addEventListener("click", function(e){
+          if(card.classList.contains("dc-rated")) return;
+          var hit = st.filter(function(el){ return el === e.target || el.contains(e.target); })[0]; if(!hit) return;
+          var score = Number(hit.dataset.dcIndex) + 1;
+          card.classList.add("dc-rated");
+          st.forEach(function(x, j){ x.classList.remove("dc-hover"); x.classList.toggle("dc-star-on", j < score); x.classList.toggle("dc-star-off", j >= score); });
+          var r = document.createElement("div"); r.className = "dc-rating";
+          r.textContent = "Je beoordeling: " + score + " van 5";
+          card.appendChild(r);
+        }, true);
+      }
+      var host = document.getElementById("webchat");
+      new MutationObserver(function(){
+        host.querySelectorAll(".webchat__adaptive-card-renderer, .ac-adaptiveCard").forEach(decorate);
+      }).observe(host, { childList:true, subtree:true });
+    })();
     function showError(msg){
       clearInterval(splashTimer);
       var s=document.getElementById("status");
@@ -340,7 +359,7 @@
         function zetBezig(aan){
           var el = document.getElementById("webchat"); el.classList.toggle("is-busy", aan);
           var inputs = el.querySelectorAll(".webchat__send-box__text-box__input, .webchat__send-box-text-box__input, textarea, input[type=text]");
-          inputs.forEach(function(i){ i.disabled = aan; i.placeholder = aan ? "Een moment, ik ben nog bezig met je vorige vraag…" : placeholderNormaal; });
+          inputs.forEach(function(i){ i.disabled = aan; i.placeholder = aan ? "Even geduld…" : placeholderNormaal; });
           var knop = el.querySelector(".webchat__send-button, button[title='Verzenden'], button[title='Send']"); if(knop) knop.disabled = aan;
           clearTimeout(bezigTimer);
           if(aan){ bezigTimer = setTimeout(function(){ zetBezig(false); }, 45000); }
