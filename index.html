@@ -61,6 +61,11 @@
     @keyframes dc-draai{to{transform:rotate(360deg);}}
     @media (prefers-reduced-motion: reduce){.dc-werk-icoon{animation:none;}}
 
+    /* Snelle antwoorden */
+    .dc-snel{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px;}
+    .dc-snel button{font-family:var(--dc-font);font-size:13px;font-weight:600;padding:7px 14px 7px 10px;border-radius:999px;border:1.5px solid var(--dc-blauw);background:#fff;color:var(--dc-blauw);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s;}
+    .dc-snel button:hover{background:var(--dc-blauw);color:#fff;}
+    .dc-snel button .ic{font-size:14px;}
     /* Sterrenkaart */
     .dc-star{cursor:pointer;}
     .dc-star-img{transition:transform .15s;}
@@ -332,9 +337,32 @@
           }, true);
         });
       }
+      // Snelle antwoorden onder de afsluitvraag ("Helpt dit, of zal ik een melding voor je aanmaken?")
+      var AFSLUIT = /zal ik (direct |dan )?(een )?melding (voor je )?aanmaken/i;
+      function knoppen(){
+        var bubbels = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content");
+        if(!bubbels.length) return;
+        var laatste = bubbels[bubbels.length - 1];
+        if(laatste.querySelector(".dc-snel")) return;
+        if(!AFSLUIT.test(laatste.textContent || "")) return;
+        var wrap = document.createElement("div"); wrap.className = "dc-snel";
+        [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen. Bedankt!"],
+         ["📝", "Maak een melding aan", "Nee, dit heeft niet geholpen. Maak een melding voor me aan."]].forEach(function(k){
+          var b = document.createElement("button"); b.type = "button";
+          b.innerHTML = '<span class="ic">' + k[0] + '</span>' + k[1];
+          b.addEventListener("click", function(){
+            if(chatStore) chatStore.dispatch({ type:"WEB_CHAT/SEND_MESSAGE", payload:{ text:k[2] } });
+            wrap.remove();
+          });
+          wrap.appendChild(b);
+        });
+        laatste.appendChild(wrap);
+      }
       var host = document.getElementById("webchat");
       new MutationObserver(function(){
         host.querySelectorAll(".webchat__adaptive-card-renderer, .ac-adaptiveCard").forEach(decorate);
+        host.querySelectorAll(".dc-snel").forEach(function(w){ var c = w.closest(".webchat__bubble__content"); var all = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content"); if(all[all.length-1] !== c) w.remove(); });
+        knoppen();
       }).observe(host, { childList:true, subtree:true });
     })();
     function showError(msg){
