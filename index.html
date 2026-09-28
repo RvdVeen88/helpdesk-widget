@@ -71,6 +71,20 @@
     .dc-rated .dc-star{pointer-events:none;cursor:default;}
     .dc-rated .dc-star-img{transform:none;}
     .dc-rating{margin:8px 12px 10px;font-size:13.5px;font-weight:600;color:var(--dc-blauw);}
+    /* Introkaart (eerste keer) */
+    .dc-intro{z-index:7;}
+    .dc-intro .dc-infocard{animation:dc-kaart-in .5s cubic-bezier(.2,.8,.3,1.1) both;position:relative;overflow:hidden;}
+    .dc-intro .dc-infocard::before{content:"";position:absolute;top:-60px;right:-60px;width:160px;height:160px;border-radius:0 50% 50% 0;background:var(--dc-lichtblauw);opacity:.35;pointer-events:none;}
+    .dc-intro .dc-infocard > *{position:relative;}
+    @keyframes dc-kaart-in{from{opacity:0;transform:translateY(14px) scale(.96);}to{opacity:1;transform:none;}}
+    .dc-nieuw{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--dc-blauw);background:var(--dc-lichtblauw);border-radius:999px;padding:3px 10px;margin-bottom:10px;position:relative;}
+    .dc-nieuw .spark{display:inline-block;animation:dc-spark 1.6s ease-in-out infinite;}
+    @keyframes dc-spark{0%,100%{transform:scale(1) rotate(0);opacity:1;}50%{transform:scale(1.4) rotate(20deg);opacity:.6;}}
+    .dc-intro-lijst{list-style:none;padding:0;margin:0 0 14px;display:flex;flex-direction:column;gap:9px;}
+    .dc-intro-lijst li{display:flex;gap:10px;align-items:flex-start;line-height:1.45;}
+    .dc-intro-lijst .ic{flex:0 0 auto;font-size:16px;line-height:1.3;}
+    .dc-intro-lijst li:nth-child(1){animation:dc-in .4s .25s ease both;}.dc-intro-lijst li:nth-child(2){animation:dc-in .4s .4s ease both;}.dc-intro-lijst li:nth-child(3){animation:dc-in .4s .55s ease both;}
+
     /* Infopaneel */
     .dc-infopanel{position:absolute;inset:0;z-index:6;background:rgba(5,55,135,.28);display:flex;align-items:center;justify-content:center;padding:16px;animation:dc-in .2s ease both;}
     .dc-infopanel[hidden]{display:none;}
@@ -183,6 +197,19 @@
         </span>
         <span id="dc-werk-tekst">Ik zoek het beste antwoord voor je…</span>
       </div>
+      <div id="dc-intro" class="dc-infopanel dc-intro" hidden>
+        <div class="dc-infocard" role="dialog" aria-labelledby="dc-intro-title">
+          <div class="dc-nieuw"><span class="spark" aria-hidden="true">✦</span> Nieuw</div>
+          <h2 id="dc-intro-title">Hoi, ik ben de ICT Assistent</h2>
+          <p>Ik ben nieuw bij DC Klinieken en help je met al je ICT-vragen, direct vanuit dit portaal.</p>
+          <ul class="dc-intro-lijst">
+            <li><span class="ic">📚</span><span>Ik zoek meteen in de ICT-instructies en geef je de link naar het juiste document.</span></li>
+            <li><span class="ic">📝</span><span>Kom ik er niet uit, dan maak ik samen met jou een melding aan voor ICT. Je hoeft zelf geen formulier in te vullen.</span></li>
+            <li><span class="ic">💬</span><span>Dit is een pilot. Aan het einde van elk gesprek vraag ik kort je mening; daar leren we van.</span></li>
+          </ul>
+          <button id="dc-intro-close" type="button">Aan de slag</button>
+        </div>
+      </div>
       <div id="dc-infopanel" class="dc-infopanel" hidden>
         <div class="dc-infocard" role="dialog" aria-labelledby="dc-info-title">
           <h2 id="dc-info-title">Over deze chat</h2>
@@ -245,7 +272,21 @@
       if(rest > 0){ setTimeout(hideSplash, rest); return; }
       splashHidden = true; clearInterval(splashTimer);
       document.getElementById("status").classList.add("is-hidden");
+      toonIntro();
     }
+    // Introkaart: één keer per browser (zolang de pilot loopt); zonder opslag elke keer
+    var INTRO_KEY = "dcIctAssistentIntroGezien_v1";
+    function toonIntro(){
+      var gezien = false; try { gezien = localStorage.getItem(INTRO_KEY) === "1"; } catch(e){}
+      if(gezien) return;
+      var el = document.getElementById("dc-intro"); el.hidden = false;
+      document.getElementById("dc-intro-close").focus();
+    }
+    document.getElementById("dc-intro-close").addEventListener("click", function(){
+      document.getElementById("dc-intro").hidden = true;
+      try { localStorage.setItem(INTRO_KEY, "1"); } catch(e){}
+      var i = document.querySelector("#webchat textarea, #webchat input[type=text]"); if(i) i.focus();
+    });
     // Sterren-kaart (tevredenheid): de sterafbeeldingen van Microsoft vervangen door eigen sterren
     // (grijs leeg, geel bij hover en na keuze). Na een klik wordt de kaart vergrendeld.
     (function(){
