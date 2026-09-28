@@ -342,7 +342,7 @@
         });
       }
       // Snelle antwoorden onder de afsluitvraag ("Helpt dit, of zal ik een melding voor je aanmaken?")
-      var AFSLUIT = /melding (voor je |voor jou )?aan/i; // laatste regel bevat "melding voor je aan…"
+      var AFSLUIT = /^💬.*melding voor je aan/i; // laatste regel begint met 💬 en bevat "melding voor je aan"
       function knoppen(){
         var bubbels = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content");
         if(!bubbels.length) return;
