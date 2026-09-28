@@ -353,8 +353,8 @@
         var laatsteTekst = blokken.length ? blokken[blokken.length - 1].textContent : (laatste.textContent || "");
         if(!AFSLUIT.test(laatsteTekst.trim())) return;
         var wrap = document.createElement("div"); wrap.className = "dc-snel";
-        [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen. Bedankt!"],
-         ["📝", "Maak een melding aan", "Nee, dit heeft niet geholpen. Maak een melding voor me aan."]].forEach(function(k){
+        [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!"],
+         ["📝", "Maak een melding aan", "Maak een melding voor me aan."]].forEach(function(k){
           var b = document.createElement("button"); b.type = "button";
           b.innerHTML = '<span class="ic">' + k[0] + '</span>' + k[1];
           b.addEventListener("click", function(){
