@@ -50,6 +50,8 @@
     .dc-refresh:hover{opacity:1;background:rgba(255,255,255,.18);}
     @media (prefers-reduced-motion: reduce){.dc-dot,.dc-orb .core,.dc-orb .ring,.dots i{animation:none;}}
 
+    #webchat.is-busy .webchat__send-box{opacity:.7;}
+    #webchat.is-busy .webchat__send-box__text-box__input{cursor:wait;}
     /* Bezig-balk: verschijnt als een antwoord langer dan 2,5 s op zich laat wachten */
     .dc-werk{position:absolute;left:12px;right:12px;bottom:60px;z-index:4;display:flex;align-items:center;gap:10px;padding:9px 14px;background:#fff;color:var(--dc-blauw);border:1px solid var(--dc-lichtblauw);border-radius:6px 18px 18px 6px;box-shadow:0 6px 18px rgba(5,55,135,.12);font-size:13px;font-weight:500;animation:dc-in .3s ease both;}
     .dc-werk[hidden]{display:none;}
@@ -310,10 +312,22 @@
           werk.hidden = false;
         }
         function verbergWerk(){ clearTimeout(werkTimer); werkTimer = null; werk.hidden = true; }
+        // Invoer vergrendelen zolang de assistent bezig is, zodat vragen niet door elkaar lopen
+        var bezigTimer = null, placeholderNormaal = "Typ je vraag…";
+        function zetBezig(aan){
+          var el = document.getElementById("webchat"); el.classList.toggle("is-busy", aan);
+          var inputs = el.querySelectorAll(".webchat__send-box__text-box__input, .webchat__send-box-text-box__input, textarea, input[type=text]");
+          inputs.forEach(function(i){ i.disabled = aan; i.placeholder = aan ? "Een moment, ik ben nog bezig met je vorige vraag…" : placeholderNormaal; });
+          var knop = el.querySelector(".webchat__send-button, button[title='Verzenden'], button[title='Send']"); if(knop) knop.disabled = aan;
+          clearTimeout(bezigTimer);
+          if(aan){ bezigTimer = setTimeout(function(){ zetBezig(false); }, 45000); }
+          else { var i = el.querySelector(".webchat__send-box__text-box__input, textarea"); if(i) i.focus(); }
+        }
         var store = WebChat.createStore({}, function(storeApi){ return function(next){ return function(action){
           if(action.type === "WEB_CHAT/SEND_MESSAGE" && action.payload && action.payload.text){
             var t = action.payload.text; clearTimeout(werkTimer);
             werkTimer = setTimeout(function(){ toonWerk(t); }, 2500);
+            setTimeout(function(){ zetBezig(true); }, 50);
           }
           if(action.type === "DIRECT_LINE/CONNECT_FULFILLED" && !welcomeSent){
             welcomeSent = true;
@@ -324,7 +338,7 @@
              action.payload.activity.type === "message" && action.payload.activity.from && action.payload.activity.from.role === "bot"){
             setTimeout(hideSplash, 250);
             laatsteBot = action.payload.activity.text || "";
-            verbergWerk();
+            verbergWerk(); zetBezig(false);
           }
           if(action.type === "DIRECT_LINE/DISCONNECT_FULFILLED" || action.type === "DIRECT_LINE/CONNECT_REJECTED"){ setOnline(false); }
           return next(action);
