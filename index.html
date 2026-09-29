@@ -359,9 +359,14 @@
       }
       // Snelle antwoorden: per herkenbare vraag van de assistent een set knoppen onder het bericht
       var SNEL = [
-        { test: /^💬.*melding voor je aan/i,
+        // Na een echte instructie (stappenlijst of handleiding): is het gelukt, of toch een melding?
+        { test: /^💬.*melding voor je aan/i, eis: "instructie",
           knoppen: [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!", "geholpen"],
                     ["📝", "Maak een melding aan", "Maak een melding voor me aan.", "melding_knop"]] },
+        // Alleen een aanbod om een melding te maken (aanvraag, hardware): ja of nee
+        { test: /^💬.*melding voor je aan/i,
+          knoppen: [["✅", "Ja, graag", "Ja, maak een melding voor me aan.", "melding_knop"],
+                    ["❌", "Nee, toch niet", "Nee, laat maar. Bedankt!"]] },
         { test: /mag ik de melding aanmaken/i,
           knoppen: [["✅", "Ja, maak de melding aan", "Ja, klopt. Maak de melding aan."],
                     ["✏️", "Ik wil iets aanpassen", "Ik wil nog iets aanpassen aan de samenvatting."]] }
@@ -373,7 +378,8 @@
         if(laatste.querySelector(".dc-snel")) return;
         var blokken = Array.prototype.slice.call(laatste.querySelectorAll("p, li, h1, h2, h3, h4, blockquote")).filter(function(b){ return !b.closest(".dc-snel") && (b.textContent || "").trim(); });
         var laatsteTekst = (blokken.length ? blokken[blokken.length - 1].textContent : (laatste.textContent || "")).trim();
-        var set = SNEL.filter(function(p){ return p.test.test(laatsteTekst); })[0]; if(!set) return;
+        var isInstructie = !!laatste.querySelector("ol li") || /Volledige handleiding|handleiding:/i.test(laatste.textContent || "");
+        var set = SNEL.filter(function(p){ return p.test.test(laatsteTekst) && (p.eis !== "instructie" || isInstructie); })[0]; if(!set) return;
         var wrap = document.createElement("div"); wrap.className = "dc-snel";
         set.knoppen.forEach(function(k){
           var b = document.createElement("button"); b.type = "button";
@@ -423,6 +429,9 @@
       try { if(window.top !== window){ window.top.location.reload(); return; } } catch(e){}
       if(chatStore){
         chatStore.dispatch({ type:"WEB_CHAT/SEND_MESSAGE", payload:{ text:"Opnieuw beginnen" } });
+        // Het systeemonderwerp "Gesprek opnieuw starten" wist alle variabelen (ook de AFAS-locatie); daarna
+        // "Begin van gesprek" opnieuw laten draaien zodat welkom + medewerkergegevens weer worden opgehaald.
+        setTimeout(function(){ chatStore.dispatch({ type:"WEB_CHAT/SEND_EVENT", payload:{ name:"startConversation", type:"event", value:"" } }); }, 1500);
       } else {
         window.location.reload();
       }
@@ -495,6 +504,7 @@
         var store = WebChat.createStore({}, function(storeApi){ return function(next){ return function(action){
           if(action.type === "WEB_CHAT/SEND_MESSAGE" && action.payload && action.payload.text){
             var t = action.payload.text; clearTimeout(werkTimer);
+            if(/^opnieuw beginnen$/i.test(t.trim())) feedbackGestuurd = false;
             if(wachtOpToelichting){ wachtOpToelichting = false; if(!/^(nee|nee hoor|nope|geen|niets|nvt|n\.v\.t\.?)\.?$/i.test(t.trim())) logEvent("feedback_toelichting", { tekst: t }); }
             werkTimer = setTimeout(function(){ toonWerk(t); }, 2500);
             setTimeout(function(){ zetBezig(true); }, 50);
