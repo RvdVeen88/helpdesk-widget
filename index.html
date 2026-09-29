@@ -173,15 +173,20 @@
     #dc-clip.let-op{color:var(--dc-blauw);animation:dc-clip-pulse 1.1s ease-in-out 4;}
     @keyframes dc-clip-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(5,55,135,.45);}50%{transform:scale(1.18);box-shadow:0 0 0 8px rgba(5,55,135,0);}}
     #dc-clip svg{width:19px;height:19px;}
-    #dc-bijlagen{position:absolute;left:12px;right:12px;bottom:60px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;}
+    /* Strook met bijlagen: eigen ruimte tussen gesprek en invoerbalk (wordt in de WebChat-opbouw geschoven vóór de invoerbalk) */
+    #dc-bijlagen{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;padding:6px 12px;border-top:1px solid var(--dc-border);background:#F7F9FD;}
     #dc-bijlagen:empty{display:none;}
-    .dc-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:12.5px;font-weight:500;padding:5px 8px 5px 10px;border-radius:999px;background:#fff;border:1px solid var(--dc-lichtblauw);color:var(--dc-blauw);box-shadow:0 4px 12px rgba(5,55,135,.10);animation:dc-in .25s ease both;}
-    .dc-chip .naam{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}
-    .dc-chip .st{color:var(--dc-text-soft);font-weight:400;}
+    .dc-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;white-space:nowrap;font-size:12.5px;font-weight:500;padding:4px 8px 4px 10px;border-radius:999px;background:#fff;border:1px solid var(--dc-lichtblauw);color:var(--dc-blauw);animation:dc-in .25s ease both;}
+    .dc-chip .naam{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;}
+    .dc-chip .st{color:var(--dc-text-soft);font-weight:400;overflow:hidden;text-overflow:ellipsis;min-width:0;}
     .dc-chip.ok{border-color:#3DBE7A;}.dc-chip.ok .st{color:#1E7F4F;}
     .dc-chip.fout{border-color:#F3764A;}.dc-chip.fout .st{color:#B23B3B;}
     .dc-chip button{border:0;background:transparent;color:var(--dc-text-soft);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;}
     .dc-chip button:hover{color:#B23B3B;}
+    /* Slepen: overlay zolang er een bestand boven de chat hangt */
+    #dc-drop{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;background:rgba(5,55,135,.14);border:3px dashed var(--dc-blauw);border-radius:0 0 22px 0;pointer-events:none;}
+    #dc-drop.aan{display:flex;}
+    #dc-drop span{background:#fff;color:var(--dc-blauw);font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;box-shadow:0 8px 24px rgba(5,55,135,.2);}
     .dc-tip{margin:8px 0 2px;font-size:12.5px;color:var(--dc-text-soft);display:flex;gap:6px;align-items:flex-start;}
 
   </style>
@@ -229,8 +234,9 @@
         </button>
       </div>
     </div>
+      <div id="dc-drop" aria-hidden="true"><span>📎 Laat los om toe te voegen</span></div>
       <div id="dc-bijlagen" aria-live="polite"></div>
-      <button id="dc-clip" type="button" title="Bijlage toevoegen (bijv. een schermafbeelding); wordt aan je melding gehangen" aria-label="Bijlage toevoegen">
+      <button id="dc-clip" type="button" title="Bijlage toevoegen (of plak met Ctrl+V / sleep een bestand hierheen); wordt aan je melding gehangen" aria-label="Bijlage toevoegen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
       </button>
       <input id="dc-file" type="file" multiple accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf,.txt,.log,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.msg,.eml,.zip" hidden>
@@ -284,15 +290,41 @@
     var bijlagen = [], meldingSbId = null, meldingNummer = null;
     var clipKnop = document.getElementById("dc-clip"), fileInput = document.getElementById("dc-file"), bijlagenBox = document.getElementById("dc-bijlagen");
     clipKnop.addEventListener("click", function(){ clipKnop.classList.remove("let-op"); fileInput.click(); });
-    fileInput.addEventListener("change", function(){
-      Array.prototype.forEach.call(fileInput.files, function(f){
+    function voegBijlagenToe(files){
+      Array.prototype.forEach.call(files, function(f){
+        if(!f || !f.name) return;
         var item = { file: f, status: "wacht", el: null };
         if(f.size > MAX_BIJLAGE_MB * 1024 * 1024){ item.status = "fout"; item.melding = "te groot (max " + MAX_BIJLAGE_MB + " MB)"; }
         bijlagen.push(item); toonChip(item);
         if(item.status === "wacht" && meldingSbId) uploadBijlage(item);
       });
-      fileInput.value = "";
+      clipKnop.classList.remove("let-op");
+    }
+    fileInput.addEventListener("change", function(){ voegBijlagenToe(fileInput.files); fileInput.value = ""; });
+    // Plakken (Ctrl+V): schermafbeelding van het klembord wordt een bestand in de wachtrij
+    document.addEventListener("paste", function(e){
+      var cd = e.clipboardData; if(!cd) return;
+      var files = [];
+      Array.prototype.forEach.call(cd.items || [], function(it){
+        if(it.kind === "file"){ var f = it.getAsFile(); if(!f) return;
+          if(!f.name || /^image\.(png|jpe?g|gif|bmp|webp)$/i.test(f.name) || f.name === "image.png"){
+            var d = new Date(), stempel = [d.getHours(), d.getMinutes(), d.getSeconds()].map(function(n){ return (n < 10 ? "0" : "") + n; }).join("-");
+            var ext = (f.type.split("/")[1] || "png").replace("jpeg", "jpg");
+            f = new File([f], "schermafbeelding-" + stempel + "." + ext, { type: f.type });
+          }
+          files.push(f); }
+      });
+      if(files.length){ e.preventDefault(); voegBijlagenToe(files); }
     });
+    // Slepen vanuit de Verkenner op de chat
+    (function(){
+      var app = document.getElementById("app"), drop = document.getElementById("dc-drop"), teller = 0;
+      function heeftBestanden(e){ return e.dataTransfer && Array.prototype.some.call(e.dataTransfer.types || [], function(t){ return t === "Files"; }); }
+      app.addEventListener("dragenter", function(e){ if(!heeftBestanden(e)) return; e.preventDefault(); teller++; drop.classList.add("aan"); });
+      app.addEventListener("dragover", function(e){ if(!heeftBestanden(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+      app.addEventListener("dragleave", function(e){ if(!heeftBestanden(e)) return; teller = Math.max(0, teller - 1); if(!teller) drop.classList.remove("aan"); });
+      app.addEventListener("drop", function(e){ if(!heeftBestanden(e)) return; e.preventDefault(); teller = 0; drop.classList.remove("aan"); voegBijlagenToe(e.dataTransfer.files); });
+    })();
     function toonChip(item){
       if(!item.el){
         item.el = document.createElement("span"); item.el.className = "dc-chip";
@@ -303,7 +335,7 @@
       }
       var st = item.el.querySelector(".st");
       item.el.className = "dc-chip" + (item.status === "ok" ? " ok" : item.status === "fout" ? " fout" : "");
-      st.textContent = item.status === "wacht" ? "· gaat mee met je melding" : item.status === "bezig" ? "· toevoegen…" :
+      st.textContent = item.status === "wacht" ? "· gaat mee" : item.status === "bezig" ? "· toevoegen…" :
                        item.status === "ok" ? "· ✓ toegevoegd aan melding " + (meldingNummer || "") : "· " + (item.melding || "mislukt");
       var knop = item.el.querySelector("button"); knop.style.display = item.status === "bezig" ? "none" : "";
       if(item.status === "ok"){ knop.remove(); setTimeout(function(){ if(item.el){ item.el.style.opacity = "0"; setTimeout(function(){ item.el.remove(); }, 400); } }, 6000); }
@@ -445,7 +477,7 @@
         { test: /mag ik de melding aanmaken/i,
           knoppen: [["✅", "Ja, maak de melding aan", "Ja, klopt. Maak de melding aan."],
                     ["✏️", "Ik wil iets aanpassen", "Ik wil nog iets aanpassen aan de samenvatting."]],
-          tip: '<span>📎</span><span>Heb je een schermafbeelding of ander bestand? Voeg het toe via de paperclip linksonder; het gaat automatisch mee met je melding.</span>' }
+          tip: '<span>📎</span><span>Heb je een schermafbeelding of ander bestand? Plak het (Ctrl+V), sleep het hierheen of gebruik de paperclip linksonder; het gaat automatisch mee met je melding.</span>' }
       ];
       function knoppen(){
         var bubbels = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content");
@@ -473,6 +505,9 @@
       }
       var host = document.getElementById("webchat");
       new MutationObserver(function(){
+        // Bijlagenstrook vóór de invoerbalk zetten zodra WebChat die heeft opgebouwd (neemt eigen ruimte in, dekt niets af)
+        var sb = host.querySelector(".webchat__send-box"); var strook = document.getElementById("dc-bijlagen");
+        if(sb && strook && strook.nextElementSibling !== sb){ try { sb.parentNode.insertBefore(strook, sb); } catch(e){} }
         host.querySelectorAll(".webchat__adaptive-card-renderer, .ac-adaptiveCard").forEach(decorate);
         host.querySelectorAll(".dc-snel").forEach(function(w){ var c = w.closest(".webchat__bubble__content"); var all = host.querySelectorAll(".webchat__bubble:not(.webchat__bubble--from-user) .webchat__bubble__content"); if(all[all.length-1] !== c) w.remove(); });
         knoppen();
