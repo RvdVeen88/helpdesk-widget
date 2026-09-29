@@ -166,7 +166,8 @@
     .dc-pilot{font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--dc-lichtblauw);border:1px solid rgba(181,208,255,.55);border-radius:999px;padding:1px 6px;line-height:1.4;}
 
     /* Bijlagen: eigen paperclip links in de invoerbalk, wachtrij als chips erboven */
-    .webchat__send-box__text-box, .webchat__send-box-text-box{padding-left:34px !important;}
+    #webchat .webchat__send-box__text-box__input, #webchat .webchat__send-box-text-box__input, #webchat .webchat__send-box textarea, #webchat .webchat__send-box input[type=text]{padding-left:40px !important;}
+    #webchat .webchat__send-box__text-box, #webchat .webchat__send-box-text-box{padding-left:0 !important;}
     #dc-clip{position:absolute;left:10px;bottom:10px;z-index:4;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:var(--dc-text-soft);cursor:pointer;display:flex;align-items:center;justify-content:center;}
     #dc-clip:hover{color:var(--dc-blauw);background:var(--dc-bubble-bot);}
     #dc-clip.let-op{color:var(--dc-blauw);animation:dc-clip-pulse 1.1s ease-in-out 4;}
@@ -435,8 +436,8 @@
       var SNEL = [
         // Na een echte instructie (stappenlijst of handleiding): is het gelukt, of toch een melding?
         { test: /^💬.*melding voor je aan/i, eis: "instructie",
-          knoppen: [["✅", "Ja, dit heeft geholpen", "Ja, dit heeft geholpen, bedankt!", "geholpen"],
-                    ["📝", "Maak een melding aan", "Maak een melding voor me aan.", "melding_knop"]] },
+          knoppen: [["✅", "Ja, het is gelukt", "Ja, dit heeft geholpen, bedankt!", "geholpen"],
+                    ["📝", "Nee, maak een melding aan", "Nee, het werkt nog niet. Maak een melding voor me aan.", "melding_knop"]] },
         // Alleen een aanbod om een melding te maken (aanvraag, hardware): ja of nee
         { test: /^💬.*melding voor je aan/i,
           knoppen: [["✅", "Ja, graag", "Ja, maak een melding voor me aan.", "melding_knop"],
@@ -453,7 +454,8 @@
         if(laatste.querySelector(".dc-snel")) return;
         var blokken = Array.prototype.slice.call(laatste.querySelectorAll("p, li, h1, h2, h3, h4, blockquote")).filter(function(b){ return !b.closest(".dc-snel") && (b.textContent || "").trim(); });
         var laatsteTekst = (blokken.length ? blokken[blokken.length - 1].textContent : (laatste.textContent || "")).trim();
-        var isInstructie = !!laatste.querySelector("ol li") || /Volledige handleiding|handleiding:/i.test(laatste.textContent || "");
+        // Instructie = er staan stappen/controles in (genummerd of met bolletjes) of een handleiding-link
+        var isInstructie = !!laatste.querySelector("ol li, ul li") || /Volledige handleiding|handleiding:/i.test(laatste.textContent || "");
         var set = SNEL.filter(function(p){ return p.test.test(laatsteTekst) && (p.eis !== "instructie" || isInstructie); })[0]; if(!set) return;
         var wrap = document.createElement("div"); wrap.className = "dc-snel";
         set.knoppen.forEach(function(k){
