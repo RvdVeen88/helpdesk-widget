@@ -291,14 +291,22 @@
     var clipKnop = document.getElementById("dc-clip"), fileInput = document.getElementById("dc-file"), bijlagenBox = document.getElementById("dc-bijlagen");
     clipKnop.addEventListener("click", function(){ clipKnop.classList.remove("let-op"); fileInput.click(); });
     function voegBijlagenToe(files){
+      var nieuw = [];
       Array.prototype.forEach.call(files, function(f){
         if(!f || !f.name) return;
         var item = { file: f, status: "wacht", el: null };
         if(f.size > MAX_BIJLAGE_MB * 1024 * 1024){ item.status = "fout"; item.melding = "te groot (max " + MAX_BIJLAGE_MB + " MB)"; }
         bijlagen.push(item); toonChip(item);
         if(item.status === "wacht" && meldingSbId) uploadBijlage(item);
+        if(item.status === "wacht") nieuw.push(item.file.name);
       });
       clipKnop.classList.remove("let-op");
+      // De agent op de hoogte brengen: hij ziet de upload zelf niet (die gaat rechtstreeks naar AFAS)
+      if(nieuw.length && chatStore){
+        var tekst = "📎 Ik heb " + (nieuw.length === 1 ? "een bijlage" : nieuw.length + " bijlagen") + " toegevoegd" +
+                    (meldingSbId ? " aan de melding" : "") + ": " + nieuw.join(", ") + (meldingSbId ? "" : " (gaat mee met de melding)");
+        setTimeout(function(){ chatStore.dispatch({ type:"WEB_CHAT/SEND_MESSAGE", payload:{ text: tekst } }); }, 150);
+      }
     }
     fileInput.addEventListener("change", function(){ voegBijlagenToe(fileInput.files); fileInput.value = ""; });
     // Plakken (Ctrl+V): schermafbeelding van het klembord wordt een bestand in de wachtrij
