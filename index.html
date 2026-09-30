@@ -598,7 +598,7 @@
 
         var welcomeSent = false;
         var werk = document.getElementById("dc-werk"), werkTekst = document.getElementById("dc-werk-tekst");
-        var laatsteBot = "", werkTimer = null, feedbackGestuurd = false, wachtOpToelichting = false;
+        var laatsteBot = "", werkTimer = null, feedbackGestuurd = false, wachtOpToelichting = false, eersteBericht = false;
         var bevestiging = /^(ja|jа|klopt|prima|ok|oké|okay|goed zo|maak maar|maak aan|doe maar|graag|top|akkoord)\b/i;
         function toonWerk(userText){
           var afas = /mag ik de melding aanmaken/i.test(laatsteBot) && bevestiging.test(userText.trim());
@@ -626,6 +626,8 @@
           if(action.type === "WEB_CHAT/SEND_MESSAGE" && action.payload && action.payload.text){
             var t = action.payload.text; clearTimeout(werkTimer);
             if(/^opnieuw beginnen$/i.test(t.trim())){ feedbackGestuurd = false; meldingSbId = null; meldingNummer = null; }
+            // Pas bij het eerste echte bericht telt het als gesprek (het openen van de pagina alleen niet)
+            else if(!eersteBericht){ eersteBericht = true; logEvent("eerste_bericht"); }
             if(wachtOpToelichting){ wachtOpToelichting = false; if(!/^(nee|nee hoor|nope|geen|niets|nvt|n\.v\.t\.?)\.?$/i.test(t.trim())) logEvent("feedback_toelichting", { tekst: t }); }
             werkTimer = setTimeout(function(){ toonWerk(t); }, 2500);
             setTimeout(function(){ zetBezig(true); }, 50);
